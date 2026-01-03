@@ -3,18 +3,18 @@ import { createClient, SupabaseClient } from "@supabase/supabase-js";
 /**
  * Get candidate-specific Supabase client with schema "jailing"
  * 
- * The search_path parameter "jails" the candidate into their specific schema.
- * When they query `SELECT * FROM video_scripts`, they only see their own data.
- * But they can still JOIN against `public.viral_benchmarks` for reference data.
+ * Uses explicit schema selection via the .schema() method to "jail" queries
+ * to the candidate's specific schema. This approach is robust against connection
+ * pooling (like Supavisor) since it doesn't rely on session-level search_path.
  * 
- * Implementation Note:
- * - The Supabase JS client doesn't support search_path directly in the connection
- * - For production, you would use a Postgres client with search_path in the connection string
- * - For now, we set search_path via a Postgres function call at the start of queries
- * - Alternatively, use schema-qualified table names: `${schemaName}.video_scripts`
+ * When using this client, always call .schema(schemaName) before .from() to
+ * ensure queries target the correct candidate schema.
+ * 
+ * The candidate can still access public schema tables by using .schema('public')
+ * before querying reference data like viral_benchmarks.
  * 
  * @param candidateId - The candidate identifier (e.g., "aidan")
- * @returns Object with Supabase client and schema name for table references
+ * @returns Object with Supabase client and schema name for explicit schema selection
  */
 export async function getCandidateSupabaseClient(candidateId: string): Promise<{
   client: SupabaseClient;
@@ -32,29 +32,13 @@ export async function getCandidateSupabaseClient(candidateId: string): Promise<{
   // Generate schema name: sandbox_{candidate_id}
   const schemaName = `sandbox_${candidateId.toLowerCase().replace(/-/g, "_")}`;
 
-  // Create Supabase client
+  // Create Supabase client ready for schema-switching
+  // No session-level search_path needed - we use explicit .schema() calls
   const client = createClient(supabaseUrl, supabaseKey, {
     auth: {
       persistSession: false,
     },
   });
-
-  // Set search_path for this connection/session
-  // This "jails" the candidate to their schema
-  // Note: In edge runtime, each request may use a new connection,
-  // so we set it per-request. For production with connection pooling,
-  // you'd set this once per connection.
-  try {
-    await client.rpc("set_candidate_search_path", {
-      candidate_id: candidateId,
-    });
-  } catch (error) {
-    // If the function doesn't exist or fails, we'll use schema-qualified names
-    // This is a fallback for development/testing
-    console.warn(
-      `Could not set search_path for candidate ${candidateId}, using schema-qualified names instead`
-    );
-  }
 
   return { client, schemaName };
 }

@@ -47,21 +47,23 @@ export async function GET(req: NextRequest) {
     await ensureCandidateSchema(candidateId);
 
     // Get candidate-specific Supabase client and schema name
-    // The search_path is set to "jail" queries to the candidate's schema
+    // Uses explicit schema selection to "jail" queries to the candidate's schema
+    // This approach is robust against connection pooling (like Supavisor)
     const { client, schemaName } = await getCandidateSupabaseClient(candidateId);
 
     // TODO: Candidate - Optimize this query - consider using a JOIN instead of separate queries
     // TODO: Consider adding indexes on frequently queried columns
     // 
-    // NOTE: The Supabase JS client queries are "jailed" to the candidate's schema.
-    // In production, this would use a Postgres client with search_path set via connection string.
-    // For now, we use schema-qualified table names via a helper function.
+    // NOTE: Using .schema(schemaName) ensures PostgREST hits the right schema.
+    // This bypasses the need for session-level search_path, making it work
+    // reliably with connection pooling.
     // 
-    // The candidate can still access public schema tables by prefixing: public.viral_benchmarks
+    // The candidate can still access public schema tables by using .schema('public')
     
     // Fetch all scripts from candidate's schema
-    // Using schema-qualified table name to ensure we query the right schema
+    // Using .schema() to explicitly target the candidate's sandbox schema
     const scriptsResponse = await client
+      .schema(schemaName)
       .from("video_scripts")
       .select("*")
       .order("created_at", { ascending: false });
@@ -74,6 +76,7 @@ export async function GET(req: NextRequest) {
 
     // Fetch all performance logs from candidate's schema
     const logsResponse = await client
+      .schema(schemaName)
       .from("performance_logs")
       .select("*")
       .order("logged_at", { ascending: false });
