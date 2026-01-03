@@ -22,8 +22,83 @@ The founder just called—we need the scripts to be grounded in *today's* news.
 ---
 
 ## 🛠 SETUP: THE WAR ROOM
-We provide the "bullets."
+We provide the "bullets." Get this running in **5 minutes**.
 
-1. **Fork this Repo.**
-2. **Run the Provisioning Script:** ```bash
-   chmod +x setup-mission.sh && ./setup-mission.sh
+### Prerequisites
+- **Node.js** >= 18 (check with `node --version`)
+- **Yarn** package manager (install with `npm install -g yarn` if needed)
+- **Google API Key** for Gemini ([Get one here](https://makersuite.google.com/app/apikey))
+
+### Quick Start
+
+1. **Clone/Fork this Repo**
+   ```bash
+   git clone <your-repo-url>
+   cd AbsurdLangChain
+   ```
+
+2. **Install Dependencies**
+   ```bash
+   yarn install
+   ```
+   *(If `yarn` is not found, install it: `npm install -g yarn`)*
+
+3. **Set Up Environment Variables**
+   
+   Create a `.env.local` file in the root directory:
+   ```bash
+   touch .env.local
+   ```
+   
+   Add your Google API key:
+   ```bash
+   GOOGLE_API_KEY=your_google_api_key_here
+   ```
+   
+   **Optional** (for retrieval features):
+   ```bash
+   SUPABASE_URL=your_supabase_url
+   SUPABASE_PRIVATE_KEY=your_supabase_private_key
+   ```
+   
+   **Optional** (for agent search features):
+   ```bash
+   SERPAPI_API_KEY=your_serpapi_key
+   ```
+
+4. **Start the Development Server**
+   ```bash
+   yarn dev
+   ```
+
+5. **Open Your Browser**
+   Navigate to [http://localhost:3000](http://localhost:3000)
+
+### 🎯 Key Files to Know
+
+- **`app/api/chat/retrieval/route.ts`** - The retrieval agent you need to fix
+- **`app/api/chat/agents/route.ts`** - Agent with tool calling
+- **`app/api/chat/route.ts`** - Simple chat endpoint
+- **`app/api/chat/structured_output/route.ts`** - Structured output example
+
+### 🧪 Test Your Setup
+
+1. Visit `http://localhost:3000`
+2. Try the **Simple Chat** - should work with just `GOOGLE_API_KEY`
+3. Try the **Retrieval** tab - requires Supabase setup (optional for mission)
+4. Try the **Agent** tab - requires `SERPAPI_API_KEY` for search (optional)
+
+### ⚡ Troubleshooting
+
+- **"yarn: command not found"** → Run `npm install -g yarn`
+- **"GOOGLE_API_KEY is not defined"** → Check your `.env.local` file exists and has the key
+- **Port 3000 already in use** → Kill the process or use `PORT=3001 yarn dev`
+- **Module not found errors** → Run `yarn install` again
+
+### 📚 Resources
+
+- [LangChain.js Docs](https://js.langchain.com/)
+- [Google Gemini API Docs](https://ai.google.dev/docs)
+- [Next.js Docs](https://nextjs.org/docs)
+
+**Ready? Start the timer. You have 20 minutes.**

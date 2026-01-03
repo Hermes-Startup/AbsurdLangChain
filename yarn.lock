@@ -218,6 +218,13 @@ __metadata:
   languageName: node
   linkType: hard
 
+"@google/generative-ai@npm:^0.24.0":
+  version: 0.24.1
+  resolution: "@google/generative-ai@npm:0.24.1"
+  checksum: d999b98acf1a6dba36a3e3693e02fde270c21b8d20333e2d458cf085e90508b24fad6c8d05d9475817fdf9d1ff1bf4082c86a4b09d2e59af739d391e59bca7ed
+  languageName: node
+  linkType: hard
+
 "@humanwhocodes/config-array@npm:^0.11.10":
   version: 0.11.14
   resolution: "@humanwhocodes/config-array@npm:0.11.14"
@@ -936,6 +943,18 @@ __metadata:
     zod: ^3.22.4
     zod-to-json-schema: ^3.22.3
   checksum: 5e5e9cd1ce39891177bc1d0d240785b60edeb0f9d53bb78a2ce394adf6fd15b972b63fb7a9d13c1f7b1341c79631baaa77225f6df36f509d0a606fb350f1d60f
+  languageName: node
+  linkType: hard
+
+"@langchain/google-genai@npm:^0.1.0":
+  version: 0.1.12
+  resolution: "@langchain/google-genai@npm:0.1.12"
+  dependencies:
+    "@google/generative-ai": ^0.24.0
+    zod-to-json-schema: ^3.22.4
+  peerDependencies:
+    "@langchain/core": ">=0.3.17 <0.4.0"
+  checksum: 45471147b47bbcd28d991e2d21f2196f777e3d48f8de491e3a86da0ddec28a87bd2f8d35a67fd8c101f1818df904367dec67462672f514b1b57ac318663f6c7f
   languageName: node
   linkType: hard
 
@@ -4296,6 +4315,7 @@ __metadata:
   dependencies:
     "@langchain/community": ^0.3.37
     "@langchain/core": ^0.3.43
+    "@langchain/google-genai": ^0.1.0
     "@langchain/langgraph": ^0.2.57
     "@langchain/langgraph-sdk": ^0.0.60
     "@langchain/openai": ^0.4.9
@@ -6938,6 +6958,15 @@ __metadata:
   peerDependencies:
     zod: ^3.23.3
   checksum: 6dc87a6045f5dcca23d009f2e212f3f5dbb790b1e80488162560359f30aa2babb6a2ea8d44953e9193c6c923300c58e5ae157a9dc089d0bcf5e2437b3158ca1b
+  languageName: node
+  linkType: hard
+
+"zod-to-json-schema@npm:^3.22.4":
+  version: 3.25.1
+  resolution: "zod-to-json-schema@npm:3.25.1"
+  peerDependencies:
+    zod: ^3.25 || ^4
+  checksum: 2033915aed81729544398a0000a63fb474972a654df712610343b8143c254d26f5d76cbee02b135648f299a0dc71be79a724d25a71a755085b438c7bfac6b9c8
   languageName: node
   linkType: hard
 
