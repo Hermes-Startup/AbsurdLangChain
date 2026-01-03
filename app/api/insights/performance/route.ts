@@ -6,7 +6,9 @@ import {
   ensureCandidateSchema,
 } from "@/utils/supabase";
 
-export const runtime = "edge";
+// Note: Using Node.js runtime instead of edge because Supabase client
+// requires Node.js APIs that aren't available in edge runtime
+// export const runtime = "edge";
 
 /**
  * GET /api/insights/performance
