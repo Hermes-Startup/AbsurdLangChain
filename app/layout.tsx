@@ -38,23 +38,23 @@ export default function RootLayout({
   return (
     <html lang="en">
       <head>
-        <title>LangChain + Next.js Template</title>
+        <title>Insights Dashboard</title>
         <link rel="shortcut icon" href="/images/favicon.ico" />
         <meta
           name="description"
-          content="Starter template showing how to use LangChain in Next.js projects. See source code and deploy your own at https://github.com/langchain-ai/langchain-nextjs-template!"
+          content="Insights Dashboard - View ad performance scores and viral predictions"
         />
-        <meta property="og:title" content="LangChain + Next.js Template" />
+        <meta property="og:title" content="Insights Dashboard" />
         <meta
           property="og:description"
-          content="Starter template showing how to use LangChain in Next.js projects. See source code and deploy your own at https://github.com/langchain-ai/langchain-nextjs-template!"
+          content="Insights Dashboard - View ad performance scores and viral predictions"
         />
         <meta property="og:image" content="/images/og-image.png" />
         <meta name="twitter:card" content="summary_large_image" />
-        <meta name="twitter:title" content="LangChain + Next.js Template" />
+        <meta name="twitter:title" content="Insights Dashboard" />
         <meta
           name="twitter:description"
-          content="Starter template showing how to use LangChain in Next.js projects. See source code and deploy your own at https://github.com/langchain-ai/langchain-nextjs-template!"
+          content="Insights Dashboard - View ad performance scores and viral predictions"
         />
         <meta name="twitter:image" content="/images/og-image.png" />
       </head>
@@ -64,41 +64,16 @@ export default function RootLayout({
             <div className="grid grid-cols-[1fr,auto] gap-2 p-4">
               <div className="flex gap-4 flex-col md:flex-row md:items-center">
                 <a
-                  href="https://js.langchain.com"
-                  rel="noopener noreferrer"
-                  target="_blank"
+                  href="/insights"
                   className="flex items-center gap-2"
                 >
                   <Logo />
                 </a>
                 <nav className="flex gap-1 flex-col md:flex-row">
-                  <ActiveLink href="/">🏴‍☠️ Chat</ActiveLink>
-                  <ActiveLink href="/structured_output">
-                    🧱 Structured Output
-                  </ActiveLink>
-                  <ActiveLink href="/agents">🦜 Agents</ActiveLink>
-                  <ActiveLink href="/retrieval">🐶 Retrieval</ActiveLink>
-                  <ActiveLink href="/retrieval_agents">
-                    🤖 Retrieval Agents
-                  </ActiveLink>
-                  <ActiveLink href="/ai_sdk">
-                    🌊 React Server Components
-                  </ActiveLink>
-                  <ActiveLink href="/langgraph">🕸️ LangGraph</ActiveLink>
+                  <ActiveLink href="/insights">🔒 Insights</ActiveLink>
                 </nav>
               </div>
 
-              <div className="flex justify-center">
-                <Button asChild variant="outline" size="default">
-                  <a
-                    href="https://github.com/langchain-ai/langchain-nextjs-template"
-                    target="_blank"
-                  >
-                    <GithubIcon className="size-3" />
-                    <span>Open in GitHub</span>
-                  </a>
-                </Button>
-              </div>
             </div>
             <div className="bg-background mx-4 relative grid rounded-t-2xl border border-input border-b-0">
               <div className="absolute inset-0">{children}</div>
