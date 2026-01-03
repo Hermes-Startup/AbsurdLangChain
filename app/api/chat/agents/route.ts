@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { Message as VercelChatMessage, StreamingTextResponse } from "ai";
 
 import { createReactAgent } from "@langchain/langgraph/prebuilt";
-import { ChatOpenAI } from "@langchain/openai";
+import { ChatGoogleGenerativeAI } from "@langchain/google-genai";
 import { SerpAPI } from "@langchain/community/tools/serpapi";
 import { Calculator } from "@langchain/community/tools/calculator";
 import {
@@ -65,8 +65,8 @@ export async function POST(req: NextRequest) {
     // Requires process.env.SERPAPI_API_KEY to be set: https://serpapi.com/
     // You can remove this or use a different tool instead.
     const tools = [new Calculator(), new SerpAPI()];
-    const chat = new ChatOpenAI({
-      model: "gpt-4o-mini",
+    const chat = new ChatGoogleGenerativeAI({
+      model: "gemini-1.5-flash",
       temperature: 0,
     });
 
@@ -92,7 +92,7 @@ export async function POST(req: NextRequest) {
        * We do some filtering of the generated events and only stream back
        * the final response as a string.
        *
-       * For this specific type of tool calling ReAct agents with OpenAI, we can tell when
+       * For this specific type of tool calling ReAct agents with Google Generative AI, we can tell when
        * the agent is ready to stream back final output when it no longer calls
        * a tool and instead streams back content.
        *

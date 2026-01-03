@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { Message as VercelChatMessage, StreamingTextResponse } from "ai";
 
-import { ChatOpenAI } from "@langchain/openai";
+import { ChatGoogleGenerativeAI } from "@langchain/google-genai";
 import { PromptTemplate } from "@langchain/core/prompts";
 import { HttpResponseOutputParser } from "langchain/output_parsers";
 
@@ -42,9 +42,9 @@ export async function POST(req: NextRequest) {
      * See a full list of supported models at:
      * https://js.langchain.com/docs/modules/model_io/models/
      */
-    const model = new ChatOpenAI({
+    const model = new ChatGoogleGenerativeAI({
       temperature: 0.8,
-      model: "gpt-4o-mini",
+      model: "gemini-1.5-flash",
     });
 
     /**

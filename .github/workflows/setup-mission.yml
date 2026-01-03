@@ -1,0 +1,29 @@
+name: 🛠 MISSION_SETUP
+on: [fork]
+
+jobs:
+  provision_access:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Generate Temporary API Key
+        id: get_key
+        run: |
+          # Request a $1.00 limited key from your LiteLLM Proxy
+          RESPONSE=$(curl -X POST "${{ secrets.PROXY_URL }}/key/generate" \
+            -H "Authorization: Bearer ${{ secrets.PROXY_MASTER_KEY }}" \
+            -d '{"models": ["gpt-4o-mini", "claude-3-5-sonnet"], "max_budget": 1.0, "duration": "1h"}')
+          
+          echo "TEMP_KEY=$(echo $RESPONSE | jq -r '.key')" >> $GITHUB_OUTPUT
+
+      - name: Create Mission Environment
+        uses: actions/github-script@v7
+        with:
+          script: |
+            // This script automatically creates a Repo Secret or 
+            // commits an encrypted .env.local for the candidate
+            github.rest.actions.createOrUpdateRepoSecret({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              secret_name: 'MISSION_API_KEY',
+              encrypted_value: '${{ steps.get_key.outputs.TEMP_KEY }}'
+            });

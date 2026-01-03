@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 
 import { z } from "zod";
 
-import { ChatOpenAI } from "@langchain/openai";
+import { ChatGoogleGenerativeAI } from "@langchain/google-genai";
 import { PromptTemplate } from "@langchain/core/prompts";
 
 export const runtime = "edge";
@@ -29,11 +29,11 @@ export async function POST(req: NextRequest) {
 
     const prompt = PromptTemplate.fromTemplate(TEMPLATE);
     /**
-     * Function calling is currently only supported with ChatOpenAI models
+     * Function calling is supported with ChatGoogleGenerativeAI models
      */
-    const model = new ChatOpenAI({
+    const model = new ChatGoogleGenerativeAI({
       temperature: 0.8,
-      model: "gpt-4o-mini",
+      model: "gemini-1.5-flash",
     });
 
     /**
@@ -55,7 +55,7 @@ export async function POST(req: NextRequest) {
       .describe("Should always be used to properly format output");
 
     /**
-     * Bind schema to the OpenAI model.
+     * Bind schema to the Google Generative AI model.
      * Future invocations of the returned model will always match the schema.
      *
      * Under the hood, uses tool calling by default.

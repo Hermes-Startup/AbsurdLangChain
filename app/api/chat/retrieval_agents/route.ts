@@ -11,7 +11,8 @@ import {
   HumanMessage,
   SystemMessage,
 } from "@langchain/core/messages";
-import { ChatOpenAI, OpenAIEmbeddings } from "@langchain/openai";
+import { ChatGoogleGenerativeAI } from "@langchain/google-genai";
+import { OpenAIEmbeddings } from "@langchain/openai";
 import { createRetrieverTool } from "langchain/tools/retriever";
 import { createReactAgent } from "@langchain/langgraph/prebuilt";
 
@@ -67,8 +68,8 @@ export async function POST(req: NextRequest) {
       .map(convertVercelMessageToLangChainMessage);
     const returnIntermediateSteps = body.show_intermediate_steps;
 
-    const chatModel = new ChatOpenAI({
-      model: "gpt-4o-mini",
+    const chatModel = new ChatGoogleGenerativeAI({
+      model: "gemini-1.5-flash",
       temperature: 0.2,
     });
 
@@ -115,7 +116,7 @@ export async function POST(req: NextRequest) {
        * We do some filtering of the generated events and only stream back
        * the final response as a string.
        *
-       * For this specific type of tool calling ReAct agents with OpenAI, we can tell when
+       * For this specific type of tool calling ReAct agents with Google Generative AI, we can tell when
        * the agent is ready to stream back final output when it no longer calls
        * a tool and instead streams back content.
        *
