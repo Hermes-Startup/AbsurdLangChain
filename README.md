@@ -1,34 +1,59 @@
-# 🦜️🔗 MISSION: GEMINI CREATIVE ENGINE [20 MINS]
+# 🚨 MISSION BRIEFING: ABSURD DATA FLYWHEEL [P0 - 20 MINS]
 
-## 🚨 THE SITUATION
-The creative engine is stalling. We're building for the next billion views, and our agents are failing to leverage the 1M token context window. The "Data Flywheel" is broken: it's not retrieving the viral hooks we need from the Postgres archive.
+## 🔴 THE SITUATION
+The **Absurd Data Flywheel** is broken. This is a P0 production incident.
 
-**Goal:** Restore the agentic flow. Prove you can ship with Gemini 2.5 Pro.
+Our creative engine generates video scripts, tracks their performance, and feeds insights back into the system to improve future scripts. This flywheel is the core of our product—without it, we're flying blind. The agents can't learn from what works. The creatives can't see which hooks drive viral performance. The entire feedback loop has stalled.
+
+**The clock is ticking.** You have 20 minutes to restore the flywheel and prove this system can ship.
+
+**Mission:** Fix the Absurd Data Flywheel. Get insights flowing from performance data back into script generation. Ship with Gemini 2.5 Pro.
 
 ---
 
-## 🎯 OBJECTIVES
+## 🎯 MISSION OBJECTIVES
 
-### 1. Fix the "Context Retrieval" (Gemini/Node.js)
-The agent in `app/api/chat/retrieval/route.ts` is failing to ground its scripts in our viral history. 
-* **Task:** Correct the similarity threshold in the LangChain `ChatGoogleGenerativeAI` node.
-* **Signal:** Can you tune an AI-native retrieval system without breaking the loop?
+The Absurd Data Flywheel has three critical breakpoints. Fix these to restore the feedback loop:
 
-### 2. Implement "Search Grounding" (The Pivot)
-The founder just called—we need the scripts to be grounded in *today's* news.
-* **Task:** Enable **Google Search Grounding** in the Gemini model config. 
-* **Constraint:** You have **5 minutes**. If the agent isn't pulling live search results into the video script, the demo fails.
+### 1. Restore Context Retrieval (The Learning Loop)
+**Status:** 🔴 BROKEN
 
-### 3. Build the "Insights" Tab (Data Flywheel)
-The creatives need to see 'Ad Performance Scores' for their generated scripts. The data is already in the `performance_logs` table.
-* **Task:** Build the 'Insights' tab to fetch this data and show a Gemini-generated summary of why the ad is likely to go viral.
-* **Files:** `app/insights/page.tsx`, `app/api/insights/performance/route.ts`, `app/api/insights/generate-summary/route.ts`
-* **Signal:** Can you build full-stack features that help creatives understand what drives performance?
+The agent in `app/api/chat/retrieval/route.ts` should be learning from our viral history, but it's not. The similarity threshold is misconfigured, so scripts aren't grounded in what actually works.
+
+* **Task:** Fix the similarity threshold in the LangChain `ChatGoogleGenerativeAI` node.
+* **Impact:** Without this, agents can't learn from past performance—the flywheel can't spin.
+* **Files:** `app/api/chat/retrieval/route.ts`
+
+### 2. Enable Search Grounding (Real-Time Context)
+**Status:** 🔴 BROKEN
+
+Scripts need to be grounded in *today's* trends, not just historical data. The founder's directive: pull live search results.
+
+* **Task:** Enable **Google Search Grounding** in the Gemini model config.
+* **Constraint:** **5 minutes max.** If the agent isn't pulling live search results, the demo fails.
+* **Files:** `app/api/chat/agents/route.ts` (or relevant agent endpoint)
+
+### 3. Build the Insights Dashboard (The Feedback Loop)
+**Status:** 🔴 CRITICAL - THIS IS THE FLYWHEEL
+
+This is the **core breakpoint**. The creatives can't see performance data, so they can't learn what drives virality. The data exists in `performance_logs`, but there's no UI to surface it. Without insights, the flywheel stops dead.
+
+* **Task:** Build the Insights tab to:
+  - Fetch performance data from the API
+  - Display scripts with their metrics (views, likes, shares, viral_score)
+  - Generate Gemini-powered summaries explaining why ads go viral
+* **Files:** 
+  - `app/insights/page.tsx` (currently locked)
+  - `app/api/insights/performance/route.ts` (already exists)
+  - `app/api/insights/generate-summary/route.ts` (needs implementation)
+* **Impact:** This closes the loop. Creatives see what works → agents learn from patterns → better scripts → more data → flywheel spins.
+
+**Priority:** Focus on Objective #3. This is the Data Flywheel's core mechanism.
 
 ---
 
 ## 🛠 SETUP: THE WAR ROOM
-We provide the "bullets." Get this running in **5 minutes**.
+You have the tools. Get this running in **5 minutes**. The clock starts now.
 
 ### Prerequisites
 - **Node.js** >= 18 (check with `node --version`)
@@ -87,13 +112,7 @@ We provide the "bullets." Get this running in **5 minutes**.
    GOOGLE_API_KEY=your_google_api_key_here
    ```
    
-   **Optional** (for Insights with database - uses mock data by default):
-   ```env
-   SUPABASE_URL=your_supabase_url
-   SUPABASE_PRIVATE_KEY=your_supabase_private_key
-   ```
-   
-   **Optional** (for retrieval features):
+   **Required** (for Insights and retrieval features):
    ```env
    SUPABASE_URL=your_supabase_url
    SUPABASE_PRIVATE_KEY=your_supabase_private_key
@@ -109,11 +128,9 @@ We provide the "bullets." Get this running in **5 minutes**.
    SERPAPI_API_KEY=your_serpapi_key
    ```
 
-4. **Database Setup (Optional)**
+4. **Set Up Database (Required for Insights)**
    
-   The Insights feature works out-of-the-box with mock data. No database setup required!
-   
-   **Optional:** If you want to use Supabase instead of mock data:
+   The Insights feature requires Supabase/PostgreSQL. Run the migrations:
    
    ```bash
    # If using Supabase CLI
@@ -128,8 +145,6 @@ We provide the "bullets." Get this running in **5 minutes**.
    - `video_scripts` table - Stores generated video scripts
    - `performance_logs` table - Stores performance metrics (views, likes, shares, viral_score)
    - Seed data with 10 sample scripts and performance metrics
-   
-   **Note:** The API automatically uses mock data if Supabase is not configured.
 
 5. **Start the Development Server**
    ```bash
@@ -139,16 +154,23 @@ We provide the "bullets." Get this running in **5 minutes**.
 6. **Open Your Browser**
    Navigate to [http://localhost:3000](http://localhost:3000)
 
-### 🎯 Key Files to Know
+### 🎯 Key Files: The Data Flywheel Components
 
-- **`app/api/chat/retrieval/route.ts`** - The retrieval agent you need to fix
-- **`app/api/chat/agents/route.ts`** - Agent with tool calling
+**Core Flywheel Files (Priority Order):**
+- **`app/insights/page.tsx`** - 🔒 **CRITICAL:** The Insights dashboard (currently locked - this is the flywheel's feedback mechanism)
+- **`app/api/insights/performance/route.ts`** - Fetches performance metrics (views, likes, shares, viral_score)
+- **`app/api/insights/generate-summary/route.ts`** - Generates Gemini summaries explaining viral performance patterns
+
+**Agent & Retrieval Files:**
+- **`app/api/chat/retrieval/route.ts`** - Retrieval agent (needs similarity threshold fix)
+- **`app/api/chat/agents/route.ts`** - Agent with tool calling (needs search grounding)
 - **`app/api/chat/route.ts`** - Simple chat endpoint
 - **`app/api/chat/structured_output/route.ts`** - Structured output example
-- **`app/insights/page.tsx`** - 🔒 Locked Insights tab (your mission)
-- **`app/api/insights/performance/route.ts`** - API to fetch performance data
-- **`app/api/insights/generate-summary/route.ts`** - API to generate Gemini summaries
-- **`supabase/migrations/`** - Database schema and seed data
+
+**Data Layer:**
+- **`supabase/migrations/001_initial_schema.sql`** - Database schema (video_scripts, performance_logs)
+- **`supabase/migrations/002_seed_data.sql`** - Seed data with performance metrics
+- **`data/insights/seed-data.ts`** - Mock performance data (used if DB not configured)
 
 ### 🧪 Test Your Setup
 
@@ -176,4 +198,13 @@ We provide the "bullets." Get this running in **5 minutes**.
 - [Google Gemini API Docs](https://ai.google.dev/docs)
 - [Next.js Docs](https://nextjs.org/docs)
 
-**Ready? Start the timer. You have 20 minutes.**
+---
+
+## ⏱️ FINAL STATUS CHECK
+
+**Mission:** Restore the Absurd Data Flywheel  
+**Priority:** P0 - Production Incident  
+**Time Limit:** 20 minutes  
+**Success Criteria:** Insights dashboard operational, performance data flowing, Gemini summaries generating, feedback loop restored.
+
+**The flywheel must spin. Start the timer.**
