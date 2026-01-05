@@ -1,0 +1,27 @@
+name: check_push
+on: [push, pull_request]
+
+jobs:
+  report-progress:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+        with:
+          fetch-depth: 0 # Necessary to calculate Refactor Ratio (Rf)
+
+      - name: Ping Admin Portal
+        run: |
+          # Calculate forensic metrics mentioned in the Velocity Architecture
+          DELETED=$(git log --pretty=format: --numstat | awk '{ s += $2 } END { print s }')
+          ADDED=$(git log --pretty=format: --numstat | awk '{ s += $1 } END { print s }')
+          
+          curl -X POST "${{ secrets.ADMIN_TELEMETRY_URL }}" \
+            -H "Content-Type: application/json" \
+            -d '{
+              "candidate_id": "${{ github.repository_owner }}",
+              "event": "push",
+              "added_lines": '"$ADDED"',
+              "deleted_lines": '"$DELETED"',
+              "commit_message": "${{ github.event.head_commit.message }}",
+              "timestamp": "'$(date -u +"%Y-%m-%dT%H:%M:%SZ")'"
+            }'
