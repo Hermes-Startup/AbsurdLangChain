@@ -9,19 +9,30 @@ jobs:
         with:
           fetch-depth: 0 # Necessary to calculate Refactor Ratio (Rf)
 
-      - name: Ping Admin Portal
+      - name: Log Forensic Metrics to Supabase
+        env:
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_KEY: ${{ secrets.SUPABASE_ANON_KEY }}
         run: |
           # Calculate forensic metrics mentioned in the Velocity Architecture
           DELETED=$(git log --pretty=format: --numstat | awk '{ s += $2 } END { print s }')
           ADDED=$(git log --pretty=format: --numstat | awk '{ s += $1 } END { print s }')
           
-          curl -X POST "${{ secrets.ADMIN_TELEMETRY_URL }}" \
+          # Ensure defaults
+          DELETED=${DELETED:-0}
+          ADDED=${ADDED:-0}
+          
+          # Sanitize commit message to avoid JSON breaking (basic)
+          COMMIT_MSG=$(echo "${{ github.event.head_commit.message }}" | sed 's/"/\\"/g' | tr -d '\n')
+
+          curl -X POST "$SUPABASE_URL/rest/v1/rpc/log_forensic_metrics" \
+            -H "apikey: $SUPABASE_KEY" \
+            -H "Authorization: Bearer $SUPABASE_KEY" \
             -H "Content-Type: application/json" \
-            -d '{
-              "candidate_id": "${{ github.repository_owner }}",
-              "event": "push",
-              "added_lines": '"$ADDED"',
-              "deleted_lines": '"$DELETED"',
-              "commit_message": "${{ github.event.head_commit.message }}",
-              "timestamp": "'$(date -u +"%Y-%m-%dT%H:%M:%SZ")'"
-            }'
+            -d "{
+              \"p_candidate_id\": \"${{ github.repository_owner }}\",
+              \"p_event\": \"push\",
+              \"p_added_lines\": $ADDED,
+              \"p_deleted_lines\": $DELETED,
+              \"p_commit_message\": \"$COMMIT_MSG\"
+            }"
