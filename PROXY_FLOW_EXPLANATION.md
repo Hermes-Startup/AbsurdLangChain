@@ -2,7 +2,7 @@
 
 ## Overview
 
-The Hermes Intelligence Proxy intercepts AI requests from Cursor, logs them to Supabase for "Glass Box" assessment, and forwards them to the real OpenAI API. This creates a transparent monitoring layer that captures candidate cognitive processes.
+The Hermes Intelligence Proxy intercepts AI requests from Cursor, logs them to Supabase for "Glass Box" assessment, and forwards them to the real Gemini API (via its OpenAI-compatible endpoint). This creates a transparent monitoring layer that captures candidate cognitive processes while utilizing Gemini's free tier.
 
 ## Complete Flow Diagram
 
@@ -107,23 +107,23 @@ The Hermes Intelligence Proxy intercepts AI requests from Cursor, logs them to S
    └─────────────────────────────────────────────┘
                     ↓
    ┌─────────────────────────────────────────────┐
-   │ Step 4: Forward to Real OpenAI API        │
-   │   - Replaces UUID with REAL_OPENAI_API_KEY  │
-   │   - POST https://api.openai.com/v1/...     │
+   │ Step 4: Forward to Real Gemini API         │
+   │   - Uses GEMINI_API_KEY                     │
+   │   - POST https://generativelanguage.googleapis.com/v1beta/openai/v1/... │
    │   - Headers:                                │
-   │     Authorization: Bearer <real_key>        │
-   │   - Body: Same request body                │
+   │     Authorization: Bearer <gemini_key>     │
+   │   - Body: Forced to gemini-1.5-flash        │
    └─────────────────────────────────────────────┘
                     ↓
 ┌─────────────────────────────────────────────────────────────────┐
-│                    OPENAI API                                    │
+│                    GEMINI API                                   │
 └─────────────────────────────────────────────────────────────────┘
 
-5. OPENAI PROCESSES REQUEST
+5. GEMINI PROCESSES REQUEST
    ┌─────────────────────────────────────────────┐
-   │ OpenAI receives request with real API key   │
+   │ Gemini receives request with real API key   │
    │ ↓                                           │
-   │ Processes prompt with GPT-4                 │
+   │ Processes prompt with Gemini 1.5 Flash      │
    │ ↓                                           │
    │ Returns response:                           │
    │   {                                         │
@@ -218,9 +218,10 @@ The Hermes Intelligence Proxy intercepts AI requests from Cursor, logs them to S
 - **Preview Text**: First 500 chars stored as TEXT for quick queries
 
 ### 3. Request Forwarding
-- **Credential Swap**: Proxy replaces candidate UUID with your real OpenAI API key
-- **Transparent**: Request body is forwarded unchanged
-- **Error Handling**: If OpenAI fails, error is logged and returned to candidate
+- **Credential Swap**: Proxy replaces candidate UUID with your real GEMINI_API_KEY
+- **Model Forcing**: Forwards as `gemini-1.5-flash` to ensure usage remains within the free tier
+- **Transparent**: Request structure is maintained (OpenAI-compatible)
+- **Error Handling**: If Gemini fails, error is logged and returned to candidate
 
 ### 4. Response Logging (Async)
 - **Two-Phase Logging**: 

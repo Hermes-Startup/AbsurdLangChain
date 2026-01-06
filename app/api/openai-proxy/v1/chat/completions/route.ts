@@ -2,18 +2,23 @@ import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
 
 // Configuration
-const REAL_OPENAI_API_KEY = process.env.REAL_OPENAI_API_KEY!;
-const OPENAI_BASE_URL = 'https://api.openai.com/v1';
-const SUPABASE_URL = process.env.SUPABASE_URL!;
-const SUPABASE_SERVICE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY!;
+const GEMINI_API_KEY = process.env.GEMINI_API_KEY;
+const GEMINI_OPENAI_BASE_URL = 'https://generativelanguage.googleapis.com/v1beta/openai';
+const SUPABASE_URL = process.env.SUPABASE_URL;
+const SUPABASE_SERVICE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY;
 
-const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_KEY);
+// Only create Supabase client if credentials are available
+const supabase = SUPABASE_URL && SUPABASE_SERVICE_KEY 
+  ? createClient(SUPABASE_URL, SUPABASE_SERVICE_KEY)
+  : null;
 
 /**
- * OpenAI-Compatible Proxy Handler
+ * Gemini-Powered OpenAI-Compatible Proxy Handler
  * 
  * Intercepts OpenAI-compatible API requests (used by Cursor, Continue.dev, Cody, etc.)
- * Cursor uses OpenAI-compatible format regardless of underlying model (GPT-4, Claude, etc.)
+ * and forwards them to Gemini's OpenAI-compatible endpoint.
+ * 
+ * Gemini models (like gemini-1.5-flash) are used to keep usage free/low-cost.
  * 
  * Endpoint: POST /api/openai-proxy/v1/chat/completions
  * Format: OpenAI-compatible (industry standard)
@@ -21,10 +26,25 @@ const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_KEY);
 export async function POST(req: NextRequest) {
   const startTime = Date.now();
   
+  // Debug logging
+  console.log('[PROXY] Request received at:', new Date().toISOString());
+  console.log('[PROXY] User-Agent:', req.headers.get('user-agent'));
+  console.log('[PROXY] URL:', req.url);
+  
+  // Check required environment variables
+  if (!GEMINI_API_KEY) {
+    console.error('[PROXY] ERROR: GEMINI_API_KEY not configured');
+    return NextResponse.json(
+      { error: { message: 'GEMINI_API_KEY is not configured' } },
+      { status: 500 }
+    );
+  }
+  
   try {
     // Extract candidate UUID from Authorization header
     const authHeader = req.headers.get('authorization');
     const candidateId = authHeader?.replace(/^Bearer\s+/i, '').trim() || null;
+    console.log('[PROXY] Candidate ID:', candidateId);
     
     if (!candidateId) {
       return NextResponse.json(
@@ -55,32 +75,44 @@ export async function POST(req: NextRequest) {
 
     const userAgent = req.headers.get('user-agent') || 'unknown';
     const promptText = extractOpenAIPrompt(body);
-    const model = body.model || 'gpt-4';
+    
+    // Force gemini-1.5-flash for free tier if no gemini model is specified
+    // or if an OpenAI model name is passed that Gemini might not map correctly.
+    const model = body.model?.includes('gemini') ? body.model : 'gemini-1.5-flash';
+    body.model = model;
+    
     const toolName = detectToolName(userAgent);
+    console.log('[PROXY] Tool detected:', toolName);
+    console.log('[PROXY] Model:', model);
+    console.log('[PROXY] Prompt preview:', promptText.substring(0, 100));
+    console.log('[PROXY] Supabase configured:', !!supabase);
     
-    // Log to Supabase (async)
-    logPromptAsync({
-      candidateId,
-      promptText,
-      promptJson: body,
-      provider: 'openai-compatible', // Mark as OpenAI-compatible format
-      toolName,
-      userAgent,
-      modelRequested: model,
-      requestMetadata: {
-        ...body,
-        messages: undefined, // Remove large messages array from metadata
-      },
-    });
+    // Log to Supabase (async) - only if Supabase is configured
+    if (supabase) {
+      console.log('[PROXY] Logging prompt to Supabase...');
+      logPromptAsync({
+        candidateId,
+        promptText,
+        promptJson: body,
+        provider: 'gemini-openai', // Mark as Gemini via OpenAI compatibility
+        toolName,
+        userAgent,
+        modelRequested: model,
+        requestMetadata: {
+          ...body,
+          messages: undefined, // Remove large messages array from metadata
+        },
+      });
+    }
 
-    // Forward to real OpenAI API
-    const openaiUrl = `${OPENAI_BASE_URL}/chat/completions`;
+    // Forward to Gemini's OpenAI-compatible API
+    const geminiUrl = `${GEMINI_OPENAI_BASE_URL}/chat/completions`;
     
-    const response = await fetch(openaiUrl, {
+    const response = await fetch(geminiUrl, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
-        'Authorization': `Bearer ${REAL_OPENAI_API_KEY}`,
+        'Authorization': `Bearer ${GEMINI_API_KEY}`,
       },
       body: JSON.stringify(body),
     });
@@ -96,14 +128,16 @@ export async function POST(req: NextRequest) {
       responseData = { error: { message: text }, status: response.status };
     }
     
-    // Update log with response (async)
-    updateLogWithResponseAsync({
-      candidateId,
-      responseStatus,
-      responseTime,
-      tokensUsed: extractOpenAITokens(responseData),
-      responseJson: responseData,
-    });
+    // Update log with response (async) - only if Supabase is configured
+    if (supabase) {
+      updateLogWithResponseAsync({
+        candidateId,
+        responseStatus,
+        responseTime,
+        tokensUsed: extractOpenAITokens(responseData),
+        responseJson: responseData,
+      });
+    }
 
     return NextResponse.json(responseData, {
       status: responseStatus,
@@ -112,7 +146,7 @@ export async function POST(req: NextRequest) {
       },
     });
   } catch (error: any) {
-    console.error('OpenAI-compatible proxy error:', error);
+    console.error('Gemini-proxy error:', error);
     return NextResponse.json(
       { error: { message: 'Internal proxy error', details: error.message } },
       { status: 500 }
@@ -122,11 +156,12 @@ export async function POST(req: NextRequest) {
 
 export async function GET() {
   return NextResponse.json({ 
-    service: 'Hermes OpenAI-Compatible Proxy',
+    service: 'Hermes Gemini-Powered Proxy',
     status: 'operational',
     version: '1.0.0',
     format: 'OpenAI-compatible',
-    endpoint: '/api/openai-proxy/v1/chat/completions'
+    endpoint: '/api/openai-proxy/v1/chat/completions',
+    model: 'gemini-1.5-flash'
   });
 }
 
@@ -181,22 +216,33 @@ async function logPromptAsync(data: {
   modelRequested: string;
   requestMetadata: any;
 }) {
-  supabase.rpc('log_prompt', {
-    p_candidate_id: data.candidateId,
-    p_prompt_text: data.promptText,
-    p_prompt_json: data.promptJson,
-    p_provider: data.provider,
-    p_tool_name: data.toolName,
-    p_user_agent: data.userAgent,
-    p_model_requested: data.modelRequested,
-    p_request_metadata: data.requestMetadata,
-    p_response_status: null,
-    p_response_time_ms: null,
-    p_tokens_used: null,
-    p_response_json: null,
-  }).catch((error) => {
-    console.error('Failed to log prompt:', error);
-  });
+  if (!supabase) {
+    console.warn('[PROXY] Supabase not configured, skipping log');
+    return; // Skip if Supabase not configured
+  }
+  
+  (async () => {
+    try {
+      console.log('[PROXY] Calling log_prompt RPC for candidate:', data.candidateId);
+      await supabase.rpc('log_prompt', {
+        p_candidate_id: data.candidateId,
+        p_prompt_text: data.promptText,
+        p_prompt_json: data.promptJson,
+        p_provider: data.provider,
+        p_tool_name: data.toolName,
+        p_user_agent: data.userAgent,
+        p_model_requested: data.modelRequested,
+        p_request_metadata: data.requestMetadata,
+        p_response_status: null,
+        p_response_time_ms: null,
+        p_tokens_used: null,
+        p_response_json: null,
+      });
+      console.log('[PROXY] Prompt logged successfully');
+    } catch (error) {
+      console.error('[PROXY] Failed to log prompt:', error);
+    }
+  })();
 }
 
 async function updateLogWithResponseAsync(data: {
@@ -206,14 +252,20 @@ async function updateLogWithResponseAsync(data: {
   tokensUsed: number | null;
   responseJson: any;
 }) {
-  supabase.rpc('update_prompt_log_response', {
-    p_candidate_id: data.candidateId,
-    p_response_status: data.responseStatus,
-    p_response_time_ms: data.responseTime,
-    p_tokens_used: data.tokensUsed,
-    p_response_json: data.responseJson,
-  }).catch((error) => {
-    console.error('Failed to update prompt log with response:', error);
-  });
+  if (!supabase) return; // Skip if Supabase not configured
+  
+  (async () => {
+    try {
+      await supabase.rpc('update_prompt_log_response', {
+        p_candidate_id: data.candidateId,
+        p_response_status: data.responseStatus,
+        p_response_time_ms: data.responseTime,
+        p_tokens_used: data.tokensUsed,
+        p_response_json: data.responseJson,
+      });
+    } catch (error) {
+      console.error('Failed to update prompt log with response:', error);
+    }
+  })();
 }
 

@@ -13,8 +13,8 @@
 Create or update `.env.local` in the project root with:
 
 ```env
-# Real API Key (for forwarding to actual OpenAI API)
-REAL_OPENAI_API_KEY=your_real_openai_api_key_here
+# Gemini API Key (for forwarding to Gemini API)
+GEMINI_API_KEY=your_gemini_api_key_here
 
 # Supabase (for logging prompts)
 SUPABASE_URL=your_supabase_project_url
@@ -26,9 +26,10 @@ NEXT_PUBLIC_SUPABASE_ANON_KEY=your_anon_key
 ```
 
 **Important:** 
-- `REAL_OPENAI_API_KEY` is YOUR real OpenAI API key (not candidate UUID)
+- `GEMINI_API_KEY` is YOUR real Google AI/Gemini API key (not candidate UUID)
 - `SUPABASE_SERVICE_ROLE_KEY` is required to write to `admin_audit` schema
 - These should be kept secret and only used on your proxy server
+- The proxy forces **gemini-1.5-flash** to ensure free tier usage.
 
 ### 2. Test the Proxy Locally
 
@@ -37,19 +38,19 @@ NEXT_PUBLIC_SUPABASE_ANON_KEY=your_anon_key
 yarn dev
 ```
 
-#### Test OpenAI-Compatible Proxy (for Cursor):
+#### Test Gemini-Powered Proxy (for Cursor):
 ```bash
 curl -X POST http://localhost:3000/api/openai-proxy/v1/chat/completions \
   -H "Content-Type: application/json" \
   -H "Authorization: Bearer 123e4567-e89b-12d3-a456-426614174000" \
   -d '{
-    "model": "gpt-4",
+    "model": "gemini-1.5-flash",
     "messages": [{"role": "user", "content": "Hello, this is a test"}]
   }'
 ```
 
 **Expected:**
-- ✅ Response from OpenAI API
+- ✅ Response from Gemini API (via OpenAI-compatible endpoint)
 - ✅ Prompt logged in `admin_audit.prompt_logs` table
 - ✅ Check Supabase dashboard to verify the log entry
 
@@ -91,7 +92,7 @@ npm i -g vercel
 vercel
 
 # Set environment variables in Vercel dashboard:
-# - REAL_OPENAI_API_KEY
+# - GEMINI_API_KEY
 # - SUPABASE_URL
 # - SUPABASE_SERVICE_ROLE_KEY
 ```
