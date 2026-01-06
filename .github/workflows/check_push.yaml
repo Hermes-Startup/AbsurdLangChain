@@ -25,6 +25,11 @@ jobs:
           # Sanitize commit message to avoid JSON breaking (basic)
           COMMIT_MSG=$(echo "${{ github.event.head_commit.message }}" | sed 's/"/\\"/g' | tr -d '\n')
 
+          if [ -z "$SUPABASE_URL" ]; then
+            echo "SUPABASE_URL not set, skipping forensic metrics logging."
+            exit 0
+          fi
+
           curl -X POST "$SUPABASE_URL/rest/v1/rpc/log_forensic_metrics" \
             -H "apikey: $SUPABASE_KEY" \
             -H "Authorization: Bearer $SUPABASE_KEY" \
