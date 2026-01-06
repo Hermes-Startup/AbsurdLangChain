@@ -101,7 +101,7 @@ async function fetchCredentials() {
  */
 function writeEnvFile(credentials) {
   const envPath = path.join(process.cwd(), '.env.local');
-  
+
   // Read existing .env.local if it exists
   let existingEnv = {};
   if (fs.existsSync(envPath)) {
@@ -125,7 +125,7 @@ function writeEnvFile(credentials) {
 
   // Build .env.local content
   const envLines = [];
-  
+
   // Write credentials from provisioning
   if (credentials.GOOGLE_API_KEY) {
     envLines.push(`GOOGLE_API_KEY=${credentials.GOOGLE_API_KEY}`);
@@ -139,6 +139,9 @@ function writeEnvFile(credentials) {
   if (credentials.SUPABASE_ANON_KEY) {
     envLines.push(`SUPABASE_ANON_KEY=${credentials.SUPABASE_ANON_KEY}`);
   }
+  if (credentials.GEMINI_BASE_URL) {
+    envLines.push(`GEMINI_BASE_URL=${credentials.GEMINI_BASE_URL}`);
+  }
 
   // Add any other existing env vars that weren't overwritten
   Object.keys(existingEnv).forEach((key) => {
@@ -149,7 +152,7 @@ function writeEnvFile(credentials) {
 
   // Write to file
   fs.writeFileSync(envPath, envLines.join('\n') + '\n', 'utf8');
-  
+
   return envPath;
 }
 
@@ -166,35 +169,35 @@ async function main() {
     // Validate required credentials
     const required = ['GOOGLE_API_KEY'];
     const missing = required.filter((key) => !credentials[key]);
-    
+
     if (missing.length > 0) {
       throw new Error(`Missing required credentials: ${missing.join(', ')}`);
     }
 
     // Write to .env.local
     const envPath = writeEnvFile(credentials);
-    
+
     logSuccess(`Credentials written to ${envPath}`);
-    
-    const provided = Object.keys(credentials).filter((key) => 
+
+    const provided = Object.keys(credentials).filter((key) =>
       ['GOOGLE_API_KEY', 'SUPABASE_URL', 'SUPABASE_PRIVATE_KEY', 'SUPABASE_ANON_KEY'].includes(key)
     );
-    
+
     log(`\n${colors.bright}Provisioned credentials:${colors.reset}`);
     provided.forEach((key) => {
       log(`  ${colors.green}✓${colors.reset} ${key}`);
     });
-    
+
     log(`\n${colors.bright}${colors.green}Ready for mission!${colors.reset}\n`);
-    
+
   } catch (error) {
     logError(`Failed to provision credentials: ${error.message}`);
-    
+
     if (error.message.includes('ECONNREFUSED') || error.message.includes('ENOTFOUND')) {
       log(`\n${colors.yellow}Tip:${colors.reset} Make sure the provisioning API is accessible.`);
       log(`   Set QUARTERMASTER_API_URL environment variable to override the default URL.`);
     }
-    
+
     process.exit(1);
   }
 }
