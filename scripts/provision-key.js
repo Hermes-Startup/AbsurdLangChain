@@ -11,9 +11,8 @@ const fs = require('fs');
 const path = require('path');
 const https = require('https');
 const http = require('http');
+require('dotenv').config();
 
-// Get provisioning API endpoint from environment or use default
-const PROVISION_API_URL = process.env.QUARTERMASTER_API_URL || process.env.PROVISION_API_URL || 'https://api.example.com/provision';
 
 // Colors for console output
 const colors = {
@@ -40,6 +39,34 @@ function logSuccess(message) {
 function logInfo(message) {
   console.log(`${colors.blue}${colors.bright}ℹ ${message}${colors.reset}`);
 }
+
+/**
+ * Load environment variables from .env.local
+ */
+function loadLocalEnv() {
+  const envPath = path.join(process.cwd(), '.env.local');
+  if (fs.existsSync(envPath)) {
+    const content = fs.readFileSync(envPath, 'utf8');
+    content.split('\n').forEach(line => {
+      const trimmed = line.trim();
+      if (trimmed && !trimmed.startsWith('#')) {
+        const [key, ...valueParts] = trimmed.split('=');
+        if (key && valueParts.length > 0) {
+          const value = valueParts.join('=').trim().replace(/^["'](.*)["']$/, '$1'); // Remove quotes if present
+          if (!process.env[key.trim()]) {
+            process.env[key.trim()] = value;
+          }
+        }
+      }
+    });
+  }
+}
+
+// Load env vars first
+loadLocalEnv();
+
+// Get provisioning API endpoint from environment or use default
+const PROVISION_API_URL = process.env.QUARTERMASTER_API_URL || process.env.PROVISION_API_URL || 'https://api.example.com/provision';
 
 /**
  * Fetch credentials from provisioning API
@@ -101,7 +128,7 @@ async function fetchCredentials() {
  */
 function writeEnvFile(credentials) {
   const envPath = path.join(process.cwd(), '.env.local');
-  
+
   // Read existing .env.local if it exists
   let existingEnv = {};
   if (fs.existsSync(envPath)) {
@@ -125,7 +152,7 @@ function writeEnvFile(credentials) {
 
   // Build .env.local content
   const envLines = [];
-  
+
   // Write credentials from provisioning
   if (credentials.GOOGLE_API_KEY) {
     envLines.push(`GOOGLE_API_KEY=${credentials.GOOGLE_API_KEY}`);
@@ -139,6 +166,9 @@ function writeEnvFile(credentials) {
   if (credentials.SUPABASE_ANON_KEY) {
     envLines.push(`SUPABASE_ANON_KEY=${credentials.SUPABASE_ANON_KEY}`);
   }
+  if (credentials.GEMINI_BASE_URL) {
+    envLines.push(`GEMINI_BASE_URL=${credentials.GEMINI_BASE_URL}`);
+  }
 
   // Add any other existing env vars that weren't overwritten
   Object.keys(existingEnv).forEach((key) => {
@@ -149,7 +179,7 @@ function writeEnvFile(credentials) {
 
   // Write to file
   fs.writeFileSync(envPath, envLines.join('\n') + '\n', 'utf8');
-  
+
   return envPath;
 }
 
@@ -166,35 +196,35 @@ async function main() {
     // Validate required credentials
     const required = ['GOOGLE_API_KEY'];
     const missing = required.filter((key) => !credentials[key]);
-    
+
     if (missing.length > 0) {
       throw new Error(`Missing required credentials: ${missing.join(', ')}`);
     }
 
     // Write to .env.local
     const envPath = writeEnvFile(credentials);
-    
+
     logSuccess(`Credentials written to ${envPath}`);
-    
-    const provided = Object.keys(credentials).filter((key) => 
+
+    const provided = Object.keys(credentials).filter((key) =>
       ['GOOGLE_API_KEY', 'SUPABASE_URL', 'SUPABASE_PRIVATE_KEY', 'SUPABASE_ANON_KEY'].includes(key)
     );
-    
+
     log(`\n${colors.bright}Provisioned credentials:${colors.reset}`);
     provided.forEach((key) => {
       log(`  ${colors.green}✓${colors.reset} ${key}`);
     });
-    
+
     log(`\n${colors.bright}${colors.green}Ready for mission!${colors.reset}\n`);
-    
+
   } catch (error) {
     logError(`Failed to provision credentials: ${error.message}`);
-    
+
     if (error.message.includes('ECONNREFUSED') || error.message.includes('ENOTFOUND')) {
       log(`\n${colors.yellow}Tip:${colors.reset} Make sure the provisioning API is accessible.`);
       log(`   Set QUARTERMASTER_API_URL environment variable to override the default URL.`);
     }
-    
+
     process.exit(1);
   }
 }
@@ -205,4 +235,3 @@ if (require.main === module) {
 }
 
 module.exports = { fetchCredentials, writeEnvFile };
-
