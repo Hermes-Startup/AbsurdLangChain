@@ -33,8 +33,31 @@ jobs:
 
           # Capture git diff (actual code changes)
           # Use --unified=3 for 3 lines of context
+          # Exclude noise: lockfiles, node_modules, build outputs, system files
           # Escape for JSON and limit size to avoid payload issues
-          DIFF_CONTENT=$(git show $COMMIT_HASH --pretty=format: --unified=3 | head -c 500000 | sed 's/\\/\\\\/g' | sed 's/"/\\"/g' | awk '{printf "%s\\n", $0}')
+          DIFF_CONTENT=$(git show $COMMIT_HASH --pretty=format: --unified=3 \
+            -- . \
+            ':!node_modules' \
+            ':!package-lock.json' \
+            ':!yarn.lock' \
+            ':!pnpm-lock.yaml' \
+            ':!bun.lockb' \
+            ':!.next' \
+            ':!dist' \
+            ':!build' \
+            ':!.cache' \
+            ':!coverage' \
+            ':!.env' \
+            ':!.env.local' \
+            ':!.env.*' \
+            ':!*.log' \
+            ':!.DS_Store' \
+            ':!Thumbs.db' \
+            ':!.git' \
+            ':!*.min.js' \
+            ':!*.min.css' \
+            ':!*.map' \
+            | head -c 500000 | sed 's/\\/\\\\/g' | sed 's/"/\\"/g' | awk '{printf "%s\\n", $0}')
 
           if [ -z "$SUPABASE_URL" ]; then
             echo "SUPABASE_URL not set, skipping session commit logging."
