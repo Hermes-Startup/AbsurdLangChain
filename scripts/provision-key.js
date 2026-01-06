@@ -12,9 +12,6 @@ const path = require('path');
 const https = require('https');
 const http = require('http');
 
-// Get provisioning API endpoint from environment or use default
-const PROVISION_API_URL = process.env.QUARTERMASTER_API_URL || process.env.PROVISION_API_URL || 'https://api.example.com/provision';
-
 // Colors for console output
 const colors = {
   reset: '\x1b[0m',
@@ -40,6 +37,34 @@ function logSuccess(message) {
 function logInfo(message) {
   console.log(`${colors.blue}${colors.bright}ℹ ${message}${colors.reset}`);
 }
+
+/**
+ * Load environment variables from .env.local
+ */
+function loadLocalEnv() {
+  const envPath = path.join(process.cwd(), '.env.local');
+  if (fs.existsSync(envPath)) {
+    const content = fs.readFileSync(envPath, 'utf8');
+    content.split('\n').forEach(line => {
+      const trimmed = line.trim();
+      if (trimmed && !trimmed.startsWith('#')) {
+        const [key, ...valueParts] = trimmed.split('=');
+        if (key && valueParts.length > 0) {
+          const value = valueParts.join('=').trim().replace(/^["'](.*)["']$/, '$1'); // Remove quotes if present
+          if (!process.env[key.trim()]) {
+            process.env[key.trim()] = value;
+          }
+        }
+      }
+    });
+  }
+}
+
+// Load env vars first
+loadLocalEnv();
+
+// Get provisioning API endpoint from environment or use default
+const PROVISION_API_URL = process.env.QUARTERMASTER_API_URL || process.env.PROVISION_API_URL || 'https://api.example.com/provision';
 
 /**
  * Fetch credentials from provisioning API
@@ -208,4 +233,3 @@ if (require.main === module) {
 }
 
 module.exports = { fetchCredentials, writeEnvFile };
-
