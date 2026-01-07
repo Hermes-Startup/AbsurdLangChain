@@ -184,18 +184,47 @@ jobs:
           SUPABASE_KEY: ${{ secrets.SUPABASE_SERVICE_KEY }}
         run: |
           CANDIDATE_ID="${{ inputs.candidate_id || github.repository_owner }}"
+          WORKFLOW_RUN_ID="${{ github.run_id }}"
+          TIMESTAMP=$(date -u +%Y-%m-%dT%H:%M:%SZ)
           
+          # Build the artifact JSON
+          ARTIFACT_JSON=$(cat <<EOF
+          {
+            "candidate_id": "$CANDIDATE_ID",
+            "timestamp": "$TIMESTAMP",
+            "scores": {
+              "build_and_types": ${{ steps.calculate.outputs.build_score }},
+              "completion": ${{ steps.calculate.outputs.completion_score }},
+              "enhanced": ${{ steps.calculate.outputs.enhanced_score }},
+              "total": ${{ steps.calculate.outputs.total_score }}
+            },
+            "metrics": {
+              "penalty": ${{ steps.calculate.outputs.penalty }},
+              "has_sql_index": ${{ steps.tests.outputs.has_sql_index }}
+            },
+            "workflow_run_id": "$WORKFLOW_RUN_ID",
+            "workflow_url": "${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}"
+          }
+          EOF
+          )
+          
+          # Submit to Supabase
           curl -X POST "$SUPABASE_URL/rest/v1/rpc/log_assessment_score" \
             -H "apikey: $SUPABASE_KEY" \
             -H "Authorization: Bearer $SUPABASE_KEY" \
             -H "Content-Type: application/json" \
-            -d '{
-              "p_candidate_id": "'"$CANDIDATE_ID"'",
-              "p_build_score": ${{ steps.calculate.outputs.build_score }},
-              "p_completion_score": ${{ steps.calculate.outputs.completion_score }},
-              "p_enhanced_score": ${{ steps.calculate.outputs.enhanced_score }},
-              "p_total_score": ${{ steps.calculate.outputs.total_score }}
-            }'
+            -d "{
+              \"p_candidate_id\": \"$CANDIDATE_ID\",
+              \"p_build_score\": ${{ steps.calculate.outputs.build_score }},
+              \"p_completion_score\": ${{ steps.calculate.outputs.completion_score }},
+              \"p_enhanced_score\": ${{ steps.calculate.outputs.enhanced_score }},
+              \"p_total_score\": ${{ steps.calculate.outputs.total_score }},
+              \"p_artifact_data\": $ARTIFACT_JSON,
+              \"p_workflow_run_id\": \"$WORKFLOW_RUN_ID\"
+            }"
+          
+          echo "✅ Scores submitted to Supabase successfully"
+          echo "📊 Workflow Run: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}"
 
       - name: Create score summary artifact
         run: |
