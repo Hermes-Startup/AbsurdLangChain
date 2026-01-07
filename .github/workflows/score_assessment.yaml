@@ -1,0 +1,303 @@
+# .github/workflows/score_assessment.yaml
+#
+# This workflow runs after a candidate submits their assessment.
+# It calculates automated scores and submits them to Supabase.
+#
+# Trigger manually or on push to main (after candidate submits PR).
+
+name: Score Assessment
+
+on:
+  workflow_dispatch:
+    inputs:
+      candidate_id:
+        description: 'Candidate ID (GitHub username)'
+        required: true
+        type: string
+  push:
+    branches:
+      - main
+    paths:
+      - 'app/insights/**'
+
+env:
+  NODE_VERSION: '20'
+
+jobs:
+  score:
+    name: Calculate Assessment Score
+    runs-on: ubuntu-latest
+    
+    outputs:
+      total_score: ${{ steps.calculate.outputs.total_score }}
+      velocity_score: ${{ steps.velocity.outputs.velocity_score }}
+      completion_score: ${{ steps.completion.outputs.completion_score }}
+      
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0  # Need full history for velocity analysis
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Install test dependencies
+        run: |
+          npm install -D vitest @testing-library/react @testing-library/jest-dom jsdom
+
+      - name: Check if build succeeds
+        id: build
+        run: |
+          if npm run build 2>&1; then
+            echo "builds=true" >> $GITHUB_OUTPUT
+            echo "✅ Build succeeded"
+          else
+            echo "builds=false" >> $GITHUB_OUTPUT
+            echo "❌ Build failed"
+          fi
+        continue-on-error: true
+
+      - name: Check TypeScript
+        id: typecheck
+        run: |
+          ERRORS=$(npx tsc --noEmit 2>&1 | grep -c "error TS" || echo "0")
+          echo "type_errors=$ERRORS" >> $GITHUB_OUTPUT
+          if [ "$ERRORS" -eq "0" ]; then
+            echo "✅ No TypeScript errors"
+          else
+            echo "⚠️  TypeScript errors: $ERRORS"
+          fi
+        continue-on-error: true
+
+      - name: Analyze completion
+        id: completion
+        run: |
+          INSIGHTS_PAGE="app/insights/page.tsx"
+          
+          # Check locked state
+          if grep -q "🔒" "$INSIGHTS_PAGE" 2>/dev/null; then
+            echo "locked_removed=false" >> $GITHUB_OUTPUT
+          else
+            echo "locked_removed=true" >> $GITHUB_OUTPUT
+          fi
+          
+          # Check for fetch
+          if grep -qE "(fetch|useEffect|useSWR)" "$INSIGHTS_PAGE" 2>/dev/null; then
+            echo "has_fetch=true" >> $GITHUB_OUTPUT
+          else
+            echo "has_fetch=false" >> $GITHUB_OUTPUT
+          fi
+          
+          # Check for metrics display
+          if grep -q "viral_score" "$INSIGHTS_PAGE" 2>/dev/null; then
+            echo "shows_metrics=true" >> $GITHUB_OUTPUT
+          else
+            echo "shows_metrics=false" >> $GITHUB_OUTPUT
+          fi
+          
+          # Check for highlighting
+          if grep -qE "(viral_score.*>.*80|highPerformer|isHighPerformer)" "$INSIGHTS_PAGE" 2>/dev/null; then
+            echo "has_highlighting=true" >> $GITHUB_OUTPUT
+          else
+            echo "has_highlighting=false" >> $GITHUB_OUTPUT
+          fi
+          
+          # Check for sorting
+          if grep -qE "\.sort\(" "$INSIGHTS_PAGE" 2>/dev/null; then
+            echo "has_sorting=true" >> $GITHUB_OUTPUT
+          else
+            echo "has_sorting=false" >> $GITHUB_OUTPUT
+          fi
+          
+          # Check for loading state
+          if grep -qiE "(loading|isLoading|spinner)" "$INSIGHTS_PAGE" 2>/dev/null; then
+            echo "has_loading=true" >> $GITHUB_OUTPUT
+          else
+            echo "has_loading=false" >> $GITHUB_OUTPUT
+          fi
+          
+          # Check for Gemini
+          if grep -qE "(generate-summary|generateSummary|gemini)" "$INSIGHTS_PAGE" 2>/dev/null; then
+            echo "has_gemini=true" >> $GITHUB_OUTPUT
+          else
+            echo "has_gemini=false" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Analyze velocity
+        id: velocity
+        run: |
+          # Count commits
+          TOTAL_COMMITS=$(git rev-list --count HEAD)
+          echo "total_commits=$TOTAL_COMMITS" >> $GITHUB_OUTPUT
+          
+          # Get first commit timestamp
+          FIRST_COMMIT_TIME=$(git log --reverse --format=%ct | head -1)
+          echo "first_commit_time=$FIRST_COMMIT_TIME" >> $GITHUB_OUTPUT
+          
+          # Calculate lines changed
+          LINES_ADDED=$(git log --pretty=format: --numstat | awk '{ s += $1 } END { print s }')
+          LINES_DELETED=$(git log --pretty=format: --numstat | awk '{ s += $2 } END { print s }')
+          echo "lines_added=${LINES_ADDED:-0}" >> $GITHUB_OUTPUT
+          echo "lines_deleted=${LINES_DELETED:-0}" >> $GITHUB_OUTPUT
+          
+          # Calculate velocity score
+          VELOCITY_SCORE=0
+          
+          # 3+ commits: 5 points
+          if [ "$TOTAL_COMMITS" -ge 3 ]; then
+            VELOCITY_SCORE=$((VELOCITY_SCORE + 5))
+          fi
+          
+          # Has deletions (shows iteration): 5 points
+          if [ "${LINES_DELETED:-0}" -gt 0 ]; then
+            VELOCITY_SCORE=$((VELOCITY_SCORE + 5))
+          fi
+          
+          echo "velocity_score=$VELOCITY_SCORE" >> $GITHUB_OUTPUT
+
+      - name: Calculate total score
+        id: calculate
+        run: |
+          # Build & Types (15 points)
+          BUILD_SCORE=0
+          if [ "${{ steps.build.outputs.builds }}" == "true" ]; then
+            BUILD_SCORE=$((BUILD_SCORE + 10))
+          fi
+          if [ "${{ steps.typecheck.outputs.type_errors }}" -lt 5 ]; then
+            BUILD_SCORE=$((BUILD_SCORE + 5))
+          fi
+          
+          # Completion (35 points)
+          COMPLETION_SCORE=0
+          if [ "${{ steps.completion.outputs.locked_removed }}" == "true" ]; then
+            COMPLETION_SCORE=$((COMPLETION_SCORE + 5))
+          fi
+          if [ "${{ steps.completion.outputs.has_fetch }}" == "true" ]; then
+            COMPLETION_SCORE=$((COMPLETION_SCORE + 10))
+          fi
+          if [ "${{ steps.completion.outputs.shows_metrics }}" == "true" ]; then
+            COMPLETION_SCORE=$((COMPLETION_SCORE + 10))
+          fi
+          if [ "${{ steps.completion.outputs.has_highlighting }}" == "true" ]; then
+            COMPLETION_SCORE=$((COMPLETION_SCORE + 10))
+          fi
+          
+          # Enhanced (15 points)
+          ENHANCED_SCORE=0
+          if [ "${{ steps.completion.outputs.has_sorting }}" == "true" ]; then
+            ENHANCED_SCORE=$((ENHANCED_SCORE + 5))
+          fi
+          if [ "${{ steps.completion.outputs.has_loading }}" == "true" ]; then
+            ENHANCED_SCORE=$((ENHANCED_SCORE + 5))
+          fi
+          # Error handling check would go here
+          ENHANCED_SCORE=$((ENHANCED_SCORE + 5))  # Assume basic error handling
+          
+          # Bonus (10 points)
+          BONUS_SCORE=0
+          if [ "${{ steps.completion.outputs.has_gemini }}" == "true" ]; then
+            BONUS_SCORE=10
+          fi
+          
+          # Velocity (from previous step)
+          VELOCITY_SCORE=${{ steps.velocity.outputs.velocity_score }}
+          
+          # Total (excluding reflection, which is scored separately)
+          AUTOMATED_TOTAL=$((BUILD_SCORE + COMPLETION_SCORE + ENHANCED_SCORE + VELOCITY_SCORE))
+          TOTAL_WITH_BONUS=$((AUTOMATED_TOTAL + BONUS_SCORE))
+          
+          echo "build_score=$BUILD_SCORE" >> $GITHUB_OUTPUT
+          echo "completion_score=$COMPLETION_SCORE" >> $GITHUB_OUTPUT
+          echo "enhanced_score=$ENHANCED_SCORE" >> $GITHUB_OUTPUT
+          echo "bonus_score=$BONUS_SCORE" >> $GITHUB_OUTPUT
+          echo "automated_total=$AUTOMATED_TOTAL" >> $GITHUB_OUTPUT
+          echo "total_score=$TOTAL_WITH_BONUS" >> $GITHUB_OUTPUT
+          
+          echo ""
+          echo "========================================"
+          echo "ASSESSMENT SCORE SUMMARY"
+          echo "========================================"
+          echo "Build & Types:    $BUILD_SCORE/15"
+          echo "Completion:       $COMPLETION_SCORE/35"
+          echo "Enhanced:         $ENHANCED_SCORE/15"
+          echo "Velocity:         $VELOCITY_SCORE/20"
+          echo "----------------------------------------"
+          echo "Automated Total:  $AUTOMATED_TOTAL/85"
+          echo "Bonus (Gemini):   $BONUS_SCORE/10"
+          echo "----------------------------------------"
+          echo "TOTAL:            $TOTAL_WITH_BONUS/95"
+          echo "========================================"
+
+      - name: Submit scores to Supabase
+        if: env.SUPABASE_URL != ''
+        env:
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_KEY: ${{ secrets.SUPABASE_SERVICE_KEY }}
+        run: |
+          CANDIDATE_ID="${{ inputs.candidate_id || github.repository_owner }}"
+          
+          curl -X POST "$SUPABASE_URL/rest/v1/rpc/log_assessment_score" \
+            -H "apikey: $SUPABASE_KEY" \
+            -H "Authorization: Bearer $SUPABASE_KEY" \
+            -H "Content-Type: application/json" \
+            -d '{
+              "p_candidate_id": "'"$CANDIDATE_ID"'",
+              "p_build_score": ${{ steps.calculate.outputs.build_score }},
+              "p_completion_score": ${{ steps.calculate.outputs.completion_score }},
+              "p_enhanced_score": ${{ steps.calculate.outputs.enhanced_score }},
+              "p_velocity_score": ${{ steps.velocity.outputs.velocity_score }},
+              "p_bonus_score": ${{ steps.calculate.outputs.bonus_score }},
+              "p_total_score": ${{ steps.calculate.outputs.total_score }},
+              "p_total_commits": ${{ steps.velocity.outputs.total_commits }},
+              "p_lines_added": ${{ steps.velocity.outputs.lines_added }},
+              "p_lines_deleted": ${{ steps.velocity.outputs.lines_deleted }}
+            }'
+
+      - name: Create score summary artifact
+        run: |
+          mkdir -p artifacts
+          cat > artifacts/score-summary.json << EOF
+          {
+            "candidate_id": "${{ inputs.candidate_id || github.repository_owner }}",
+            "timestamp": "$(date -u +%Y-%m-%dT%H:%M:%SZ)",
+            "scores": {
+              "build_and_types": ${{ steps.calculate.outputs.build_score }},
+              "completion": ${{ steps.calculate.outputs.completion_score }},
+              "enhanced": ${{ steps.calculate.outputs.enhanced_score }},
+              "velocity": ${{ steps.velocity.outputs.velocity_score }},
+              "bonus": ${{ steps.calculate.outputs.bonus_score }},
+              "automated_total": ${{ steps.calculate.outputs.automated_total }},
+              "total_with_bonus": ${{ steps.calculate.outputs.total_score }}
+            },
+            "metrics": {
+              "builds": ${{ steps.build.outputs.builds }},
+              "type_errors": ${{ steps.typecheck.outputs.type_errors }},
+              "locked_removed": ${{ steps.completion.outputs.locked_removed }},
+              "has_fetch": ${{ steps.completion.outputs.has_fetch }},
+              "shows_metrics": ${{ steps.completion.outputs.shows_metrics }},
+              "has_highlighting": ${{ steps.completion.outputs.has_highlighting }},
+              "has_sorting": ${{ steps.completion.outputs.has_sorting }},
+              "has_loading": ${{ steps.completion.outputs.has_loading }},
+              "has_gemini": ${{ steps.completion.outputs.has_gemini }},
+              "total_commits": ${{ steps.velocity.outputs.total_commits }},
+              "lines_added": ${{ steps.velocity.outputs.lines_added }},
+              "lines_deleted": ${{ steps.velocity.outputs.lines_deleted }}
+            }
+          }
+          EOF
+          
+          cat artifacts/score-summary.json
+
+      - name: Upload score artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: assessment-score
+          path: artifacts/score-summary.json
+          retention-days: 90
