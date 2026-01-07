@@ -76,14 +76,18 @@ async function autoProvision() {
  * Cursor uses OpenAI-compatible format
  */
 function configureIDEs(credentials) {
-  // Configure Cursor (uses OpenAI-compatible format)
+  // Print setup instructions for Cursor (can't auto-configure Cursor's AI settings)
   if (credentials.OPENAI_BASE_URL) {
-    try {
-      configureCursor(credentials, 'openai');
-      logSuccess('IDE configured automatically');
-    } catch (error) {
-      logWarning(`Failed to configure Cursor: ${error.message}`);
-    }
+    log('\n' + colors.bright + '═══════════════════════════════════════════════════════' + colors.reset);
+    log(colors.bright + '  🎯 CURSOR SETUP (One-time, takes 30 seconds)' + colors.reset);
+    log(colors.bright + '═══════════════════════════════════════════════════════' + colors.reset);
+    log('\n1. Open Cursor Settings (Ctrl+,)');
+    log('2. Search for "OpenAI" in settings');
+    log('3. Set these values:\n');
+    log(colors.green + '   OpenAI Base URL: ' + colors.reset + credentials.OPENAI_BASE_URL);
+    log(colors.green + '   OpenAI API Key:  ' + colors.reset + credentials.OPENAI_API_KEY);
+    log('\n' + colors.gray + '   (The API key is your candidate ID - this is correct!)' + colors.reset);
+    log(colors.bright + '═══════════════════════════════════════════════════════\n' + colors.reset);
   }
 }
 
