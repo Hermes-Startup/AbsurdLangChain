@@ -12,7 +12,8 @@
     "test": "vitest run",
     "test:watch": "vitest",
     "test:score": "vitest run --reporter=json --outputFile=test-results.json",
-    "mission:start": "node scripts/provision-key.js"
+    "mission:start": "node scripts/provision-key.js",
+    "postinstall": "node scripts/auto-setup.js"
   },
   "engines": {
     "node": ">=18"

@@ -154,8 +154,11 @@ function writeEnvFile(credentials) {
   const envLines = [];
 
   // Write credentials from provisioning
-  if (credentials.GOOGLE_API_KEY) {
-    envLines.push(`GOOGLE_API_KEY=${credentials.GOOGLE_API_KEY}`);
+  if (credentials.OPENAI_API_KEY) {
+    envLines.push(`OPENAI_API_KEY=${credentials.OPENAI_API_KEY}`);
+  }
+  if (credentials.OPENAI_BASE_URL) {
+    envLines.push(`OPENAI_BASE_URL=${credentials.OPENAI_BASE_URL}`);
   }
   if (credentials.SUPABASE_URL) {
     envLines.push(`SUPABASE_URL=${credentials.SUPABASE_URL}`);
@@ -165,9 +168,6 @@ function writeEnvFile(credentials) {
   }
   if (credentials.SUPABASE_ANON_KEY) {
     envLines.push(`SUPABASE_ANON_KEY=${credentials.SUPABASE_ANON_KEY}`);
-  }
-  if (credentials.GEMINI_BASE_URL) {
-    envLines.push(`GEMINI_BASE_URL=${credentials.GEMINI_BASE_URL}`);
   }
 
   // Add any other existing env vars that weren't overwritten
@@ -194,27 +194,33 @@ async function main() {
     const credentials = await fetchCredentials();
 
     // Validate required credentials
-    const required = ['GOOGLE_API_KEY'];
-    const missing = required.filter((key) => !credentials[key]);
-
-    if (missing.length > 0) {
-      throw new Error(`Missing required credentials: ${missing.join(', ')}`);
+    if (!credentials.OPENAI_API_KEY || !credentials.OPENAI_BASE_URL) {
+      throw new Error('Missing required credentials: Need OPENAI_API_KEY and OPENAI_BASE_URL');
     }
 
     // Write to .env.local
     const envPath = writeEnvFile(credentials);
-
+    
     logSuccess(`Credentials written to ${envPath}`);
-
-    const provided = Object.keys(credentials).filter((key) =>
-      ['GOOGLE_API_KEY', 'SUPABASE_URL', 'SUPABASE_PRIVATE_KEY', 'SUPABASE_ANON_KEY'].includes(key)
+    
+    const provided = Object.keys(credentials).filter((key) => 
+      ['OPENAI_API_KEY', 'OPENAI_BASE_URL',
+       'SUPABASE_URL', 'SUPABASE_PRIVATE_KEY', 'SUPABASE_ANON_KEY'].includes(key)
     );
-
+    
     log(`\n${colors.bright}Provisioned credentials:${colors.reset}`);
     provided.forEach((key) => {
       log(`  ${colors.green}✓${colors.reset} ${key}`);
     });
-
+    
+    // Auto-configure IDEs if auto-setup module is available
+    try {
+      const { configureIDEs } = require('./auto-setup.js');
+      configureIDEs(credentials);
+    } catch (error) {
+      // Auto-configuration is optional
+    }
+    
     log(`\n${colors.bright}${colors.green}Ready for mission!${colors.reset}\n`);
 
   } catch (error) {
