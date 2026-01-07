@@ -92,44 +92,6 @@ function configureIDEs(credentials) {
 }
 
 /**
- * Configure Cursor IDE
- */
-function configureCursor(credentials, provider = 'openai') {
-  const cursorDir = path.join(process.cwd(), '.cursor');
-  const configPath = path.join(cursorDir, 'config.json');
-  
-  // Create .cursor directory if it doesn't exist
-  if (!fs.existsSync(cursorDir)) {
-    fs.mkdirSync(cursorDir, { recursive: true });
-  }
-  
-  // Read existing config or create new one
-  let config = {};
-  if (fs.existsSync(configPath)) {
-    try {
-      config = JSON.parse(fs.readFileSync(configPath, 'utf8'));
-    } catch (error) {
-      // If config is invalid, start fresh
-      config = {};
-    }
-  }
-  
-  // Update AI configuration (Cursor uses OpenAI-compatible format)
-  if (provider === 'openai' && credentials.OPENAI_BASE_URL) {
-    config.ai = {
-      ...config.ai,
-      apiEndpoint: credentials.OPENAI_BASE_URL,
-      apiKey: credentials.OPENAI_API_KEY,
-      provider: 'openai', // OpenAI-compatible format
-    };
-  }
-  
-  fs.writeFileSync(configPath, JSON.stringify(config, null, 2));
-  logInfo('Cursor configuration updated');
-}
-
-
-/**
  * Main setup function
  */
 async function main() {
@@ -177,5 +139,5 @@ if (require.main === module) {
   });
 }
 
-module.exports = { main, configureIDEs, configureCursor };
+module.exports = { main, configureIDEs };
 
