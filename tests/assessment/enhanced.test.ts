@@ -65,7 +65,8 @@ describe('Enhanced Features (25 points)', () => {
 
     describe('Gemini Integration (10 points)', () => {
         it('should call the generate-summary API', () => {
-            const hasGeminiCall = /\/api\/insights\/generate-summary|generateSummary|gemini/i.test(insightsPageContent);
+            // Look for actual fetch/API calls, not just text mentioning the API
+            const hasGeminiCall = /fetch\s*\([^)]*['"`]\/api\/insights\/generate-summary['"`]|axios.*generate-summary|await.*generateSummary\(/i.test(insightsPageContent);
             expect(hasGeminiCall).toBe(true);
         });
 
@@ -74,7 +75,8 @@ describe('Enhanced Features (25 points)', () => {
         });
 
         it('should display AI-generated summaries', () => {
-            const hasSummaryDisplay = /summary|generated|explanation|analysis/i.test(insightsPageContent);
+            // Look for state management or variables that would hold AI summaries
+            const hasSummaryDisplay = /\b(summary|aiSummary|generatedSummary)\s*[:=]|useState.*summary|\.summary\b/i.test(insightsPageContent);
             expect(hasSummaryDisplay).toBe(true);
         });
     });
