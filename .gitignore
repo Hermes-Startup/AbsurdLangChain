@@ -30,6 +30,9 @@ yarn-error.log*
 # Cursor IDE configuration (user-specific, auto-generated)
 .cursor/config.json
 
+# Prompt shadowing (git hook approach)
+.prompts/
+
 # Windows reserved filenames
 nul
 CON

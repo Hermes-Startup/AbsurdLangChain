@@ -10,7 +10,8 @@
     "lint": "next lint",
     "format": "prettier --write \"app\"",
     "mission:start": "node scripts/provision-key.js",
-    "postinstall": "node scripts/auto-setup.js"
+    "postinstall": "node scripts/auto-setup.js",
+    "test:prompt-log": "node scripts/log-prompts.js"
   },
   "engines": {
     "node": ">=18"
