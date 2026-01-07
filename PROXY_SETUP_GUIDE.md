@@ -194,11 +194,24 @@ You're ready when:
 - ✅ Response data is updated in the log entry
 - ✅ No errors in console or Supabase logs
 
+## ⚠️ Known Cursor Configuration Limitation
+
+**Important:** Cursor's support for custom API endpoints via `.cursor/config.json` or UI settings is unreliable. The proxy route works correctly, but Cursor may not use it consistently, especially with `localhost` URLs.
+
+**Workaround:**
+1. Configure in Cursor Settings → Models → Override OpenAI Base URL
+2. Set Base URL to your proxy endpoint (works better with public HTTPS URLs)
+3. Restart Cursor completely after configuration
+4. Verify by checking dev server console for POST request logs
+5. If it still doesn't work, this is a known Cursor limitation
+
+**Note:** The proxy and logging infrastructure are fully functional. When requests reach the proxy, prompts are logged correctly. The issue is Cursor's configuration mechanism, not the proxy code.
+
 ## 🎯 Next Steps
 
 Once the proxy is working:
-1. Deploy to production (Vercel, Railway, etc.)
-2. Update your Hermes provisioning endpoint to return the proxy URL
+1. Deploy to production (Vercel, Railway, etc.) - public HTTPS URLs work better with Cursor
+2. Update your Hermes provisioning endpoint to return the production proxy URL
 3. Test with actual Cursor requests
 4. Monitor prompt logs in Supabase
 

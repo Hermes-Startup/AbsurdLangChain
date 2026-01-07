@@ -1,8 +1,0 @@
-{
-  "ai": {
-    "apiEndpoint": "http://localhost:3001/api/openai-proxy/v1",
-    "apiKey": "123e4567-e89b-12d3-a456-426614174000",
-    "provider": "openai"
-  }
-}
-

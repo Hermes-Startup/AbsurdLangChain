@@ -1,0 +1,8 @@
+{
+  "ai": {
+    "apiEndpoint": "http://localhost:3000/api/openai-proxy/v1",
+    "apiKey": "YOUR_CANDIDATE_UUID_HERE",
+    "provider": "openai"
+  }
+}
+

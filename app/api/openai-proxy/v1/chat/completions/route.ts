@@ -1,6 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
 
+// Ensure Node.js runtime (not edge) for proper console logging
+export const runtime = 'nodejs';
+
 // Configuration
 const GEMINI_API_KEY = process.env.GEMINI_API_KEY;
 const GEMINI_OPENAI_BASE_URL = 'https://generativelanguage.googleapis.com/v1beta/openai';
@@ -11,6 +14,11 @@ const SUPABASE_SERVICE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY;
 const supabase = SUPABASE_URL && SUPABASE_SERVICE_KEY 
   ? createClient(SUPABASE_URL, SUPABASE_SERVICE_KEY)
   : null;
+
+// Log initialization status (only in development)
+if (process.env.NODE_ENV === 'development' && supabase) {
+  console.log('[PROXY] Initialized - Supabase logging enabled');
+}
 
 /**
  * Gemini-Powered OpenAI-Compatible Proxy Handler
@@ -26,10 +34,9 @@ const supabase = SUPABASE_URL && SUPABASE_SERVICE_KEY
 export async function POST(req: NextRequest) {
   const startTime = Date.now();
   
-  // Debug logging
-  console.log('[PROXY] Request received at:', new Date().toISOString());
-  console.log('[PROXY] User-Agent:', req.headers.get('user-agent'));
-  console.log('[PROXY] URL:', req.url);
+  // Extract candidate UUID from Authorization header
+  const authHeader = req.headers.get('authorization');
+  const candidateId = authHeader?.replace(/^Bearer\s+/i, '').trim() || null;
   
   // Check required environment variables
   if (!GEMINI_API_KEY) {
@@ -41,10 +48,6 @@ export async function POST(req: NextRequest) {
   }
   
   try {
-    // Extract candidate UUID from Authorization header
-    const authHeader = req.headers.get('authorization');
-    const candidateId = authHeader?.replace(/^Bearer\s+/i, '').trim() || null;
-    console.log('[PROXY] Candidate ID:', candidateId);
     
     if (!candidateId) {
       return NextResponse.json(
@@ -82,14 +85,9 @@ export async function POST(req: NextRequest) {
     body.model = model;
     
     const toolName = detectToolName(userAgent);
-    console.log('[PROXY] Tool detected:', toolName);
-    console.log('[PROXY] Model:', model);
-    console.log('[PROXY] Prompt preview:', promptText.substring(0, 100));
-    console.log('[PROXY] Supabase configured:', !!supabase);
     
     // Log to Supabase (async) - only if Supabase is configured
     if (supabase) {
-      console.log('[PROXY] Logging prompt to Supabase...');
       logPromptAsync({
         candidateId,
         promptText,
@@ -217,14 +215,12 @@ async function logPromptAsync(data: {
   requestMetadata: any;
 }) {
   if (!supabase) {
-    console.warn('[PROXY] Supabase not configured, skipping log');
     return; // Skip if Supabase not configured
   }
   
   (async () => {
     try {
-      console.log('[PROXY] Calling log_prompt RPC for candidate:', data.candidateId);
-      await supabase.rpc('log_prompt', {
+      const { data: result, error } = await supabase.rpc('log_prompt', {
         p_candidate_id: data.candidateId,
         p_prompt_text: data.promptText,
         p_prompt_json: data.promptJson,
@@ -238,9 +234,20 @@ async function logPromptAsync(data: {
         p_tokens_used: null,
         p_response_json: null,
       });
-      console.log('[PROXY] Prompt logged successfully');
-    } catch (error) {
-      console.error('[PROXY] Failed to log prompt:', error);
+      
+      if (error) {
+        console.error('[PROXY] Failed to log prompt:', error.message);
+        if (process.env.NODE_ENV === 'development') {
+          console.error('[PROXY] Error details:', error);
+        }
+      } else if (process.env.NODE_ENV === 'development') {
+        console.log('[PROXY] Prompt logged:', result);
+      }
+    } catch (error: any) {
+      console.error('[PROXY] Exception logging prompt:', error.message);
+      if (process.env.NODE_ENV === 'development') {
+        console.error('[PROXY] Error stack:', error?.stack);
+      }
     }
   })();
 }
@@ -252,19 +259,31 @@ async function updateLogWithResponseAsync(data: {
   tokensUsed: number | null;
   responseJson: any;
 }) {
-  if (!supabase) return; // Skip if Supabase not configured
+  if (!supabase) {
+    return; // Skip if Supabase not configured
+  }
   
   (async () => {
     try {
-      await supabase.rpc('update_prompt_log_response', {
+      const { error } = await supabase.rpc('update_prompt_log_response', {
         p_candidate_id: data.candidateId,
         p_response_status: data.responseStatus,
         p_response_time_ms: data.responseTime,
         p_tokens_used: data.tokensUsed,
         p_response_json: data.responseJson,
       });
-    } catch (error) {
-      console.error('Failed to update prompt log with response:', error);
+      
+      if (error) {
+        console.error('[PROXY] Failed to update prompt log:', error.message);
+        if (process.env.NODE_ENV === 'development') {
+          console.error('[PROXY] Error details:', error);
+        }
+      }
+    } catch (error: any) {
+      console.error('[PROXY] Exception updating prompt log:', error.message);
+      if (process.env.NODE_ENV === 'development') {
+        console.error('[PROXY] Error stack:', error?.stack);
+      }
     }
   })();
 }
