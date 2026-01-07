@@ -5884,6 +5884,7 @@ __metadata:
     dotenv: ^17.2.3
     eslint: 8.46.0
     eslint-config-next: 13.4.12
+    glob: ^13.0.0
     jsdom: ^24.0.0
     langchain: ^0.3.19
     lucide-react: ^0.473.0

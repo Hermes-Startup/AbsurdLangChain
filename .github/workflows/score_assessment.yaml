@@ -78,7 +78,8 @@ jobs:
                 build: { passed: 0, total: 0 },
                 completion: { passed: 0, total: 0 },
                 enhanced: { passed: 0, total: 0 },
-                sabotage: { passed: 0, total: 0 }
+                sabotage: { passed: 0, total: 0 },
+                typeSafety: { passed: 0, total: 0 }
               };
               
               // Process test files
@@ -89,6 +90,7 @@ jobs:
                 if (fileName.includes('build')) category = 'build';
                 else if (fileName.includes('enhanced')) category = 'enhanced';
                 else if (fileName.includes('sabotage')) category = 'sabotage';
+                else if (fileName.includes('type-safety')) category = 'typeSafety';
                 
                 for (const test of file.assertionResults || []) {
                   scores[category].total++;
@@ -103,11 +105,13 @@ jobs:
               const completionScore = Math.round((scores.completion.passed / Math.max(scores.completion.total, 1)) * 35);
               const enhancedScore = Math.round((scores.enhanced.passed / Math.max(scores.enhanced.total, 1)) * 25);
               const hasSqlIndex = scores.sabotage.passed > 0;
+              const hasTypeSafetyViolation = scores.typeSafety.total > 0 && scores.typeSafety.passed < scores.typeSafety.total;
               
               console.log('BUILD_SCORE=' + buildScore);
               console.log('COMPLETION_SCORE=' + completionScore);
               console.log('ENHANCED_SCORE=' + enhancedScore);
               console.log('HAS_SQL_INDEX=' + hasSqlIndex);
+              console.log('HAS_TYPE_SAFETY_VIOLATION=' + hasTypeSafetyViolation);
               console.log('BUILD_TESTS=' + scores.build.passed + '/' + scores.build.total);
               console.log('COMPLETION_TESTS=' + scores.completion.passed + '/' + scores.completion.total);
               console.log('ENHANCED_TESTS=' + scores.enhanced.passed + '/' + scores.enhanced.total);
@@ -118,11 +122,13 @@ jobs:
             COMPLETION_SCORE=$(grep 'COMPLETION_SCORE=' test-scores.txt | cut -d= -f2)
             ENHANCED_SCORE=$(grep 'ENHANCED_SCORE=' test-scores.txt | cut -d= -f2)
             HAS_SQL_INDEX=$(grep 'HAS_SQL_INDEX=' test-scores.txt | cut -d= -f2)
+            HAS_TYPE_SAFETY_VIOLATION=$(grep 'HAS_TYPE_SAFETY_VIOLATION=' test-scores.txt | cut -d= -f2)
             
             echo "build_score=${BUILD_SCORE:-0}" >> $GITHUB_OUTPUT
             echo "completion_score=${COMPLETION_SCORE:-0}" >> $GITHUB_OUTPUT
             echo "enhanced_score=${ENHANCED_SCORE:-0}" >> $GITHUB_OUTPUT
             echo "has_sql_index=${HAS_SQL_INDEX:-false}" >> $GITHUB_OUTPUT
+            echo "has_type_safety_violation=${HAS_TYPE_SAFETY_VIOLATION:-false}" >> $GITHUB_OUTPUT
             
             echo ""
             echo "========================================"
@@ -156,11 +162,21 @@ jobs:
           SUBTOTAL=$((BUILD_SCORE + COMPLETION_SCORE + ENHANCED_SCORE))
           
           # Sabotage Detection: SQL Index penalty (-10 points)
-          PENALTY=0
+          SQL_PENALTY=0
           if [ "${{ steps.tests.outputs.has_sql_index }}" == "false" ]; then
-            PENALTY=10
+            SQL_PENALTY=10
             echo "⚠️  PENALTY: SQL Index removed (-10 points)"
           fi
+          
+          # Type Safety: Excessive any usage penalty (-5 points)
+          TYPE_SAFETY_PENALTY=0
+          if [ "${{ steps.tests.outputs.has_type_safety_violation }}" == "true" ]; then
+            TYPE_SAFETY_PENALTY=5
+            echo "⚠️  PENALTY: Excessive 'any' type usage (-5 points)"
+          fi
+          
+          # Total penalties
+          PENALTY=$((SQL_PENALTY + TYPE_SAFETY_PENALTY))
           
           # Total (excluding reflection, which is scored separately)
           TOTAL_SCORE=$((SUBTOTAL - PENALTY))
@@ -180,8 +196,14 @@ jobs:
           echo "Enhanced:         $ENHANCED_SCORE/25"
           echo "----------------------------------------"
           echo "Subtotal:         $SUBTOTAL/75"
+          if [ "$SQL_PENALTY" -gt 0 ]; then
+            echo "Penalty:          -$SQL_PENALTY (SQL Index removed)"
+          fi
+          if [ "$TYPE_SAFETY_PENALTY" -gt 0 ]; then
+            echo "Penalty:          -$TYPE_SAFETY_PENALTY (Excessive 'any' usage)"
+          fi
           if [ "$PENALTY" -gt 0 ]; then
-            echo "Penalty:          -$PENALTY (SQL Index removed)"
+            echo "Total Penalty:    -$PENALTY"
           fi
           echo "----------------------------------------"
           echo "TOTAL:            $TOTAL_SCORE/75"
