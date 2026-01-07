@@ -17,66 +17,14 @@ This test suite evaluates candidate submissions across multiple dimensions:
 
 **Total: 115 points** (100 base + 15 bonus)
 
-## Quick Start
+## How It Works
 
-```bash
-# Install dependencies
-npm install
-
-# Run all tests
-npm test
-
-# Run specific test suites
-npm run test:scoring      # Assessment scoring
-npm run test:velocity     # Commit analysis
-npm run test:api          # API integration
-npm run test:components   # Component unit tests
-npm run test:reflection   # Reflection scoring
-
-# Run full scoring (scoring + velocity)
-npm run score
-```
-
-## Test Files
-
-### `tests/assessment-scoring.test.ts`
-Main scoring tests that analyze the candidate's `app/insights/page.tsx`:
-- Build succeeds
-- TypeScript passes
-- Locked state removed
-- Data fetching implemented
-- Metrics displayed
-- High performers highlighted
-- Sorting implemented
-- Loading/error states
-- Code quality checks
-
-### `tests/velocity-analysis.test.ts`
-Analyzes git commit history:
-- First commit timing
-- Commit frequency
-- Gap analysis
-- Iteration evidence
-
-### `tests/api-integration.test.ts`
-Tests API endpoints (requires running dev server):
-- `/api/insights/performance` returns correct data
-- `/api/insights/generate-summary` accepts POST
-- `/insights` page renders without locked state
-
-### `tests/components.test.tsx`
-Unit tests for UI components:
-- Data fetching behavior
-- Display logic
-- Sorting functionality
-- Formatting helpers
-
-### `tests/reflection-scoring.test.ts`
-Scores candidate reflection answers for AI usage:
-- Used AI appropriately
-- Prompts were specific
-- Identified AI mistakes
-- Could override when needed
+All testing and scoring is automated through GitHub Actions. When a candidate pushes their code, the `score_assessment.yaml` workflow automatically:
+- Builds the project and checks TypeScript
+- Analyzes code for completion criteria
+- Evaluates git history for velocity metrics
+- Calculates the total score
+- Submits results to Supabase
 
 ## Scoring Rubric
 
@@ -122,28 +70,39 @@ Scores candidate reflection answers for AI usage:
 |----------|--------|
 | Gemini summary integration attempted | 10 |
 
-## GitHub Actions Integration
+## GitHub Actions Workflow
 
-The `score_assessment.yaml` workflow:
-1. Runs on push to main or manual trigger
-2. Checks build and TypeScript
-3. Analyzes code for completion criteria
-4. Analyzes git history for velocity
-5. Calculates total score
-6. Submits to Supabase (if configured)
-7. Creates score artifact
+The assessment scoring is fully automated through the `.github/workflows/score_assessment.yaml` workflow.
 
-### Manual Trigger
+### Automatic Execution
 
-```bash
-gh workflow run score_assessment.yaml \
-  -f candidate_id=username
-```
+The workflow runs automatically on:
+- Every push to the repository
+- Pull request events
 
-### Secrets Required
+### What It Does
 
+1. Checks out the candidate's code
+2. Runs `npm run build` to verify the project compiles
+3. Runs `tsc --noEmit` to check for TypeScript errors
+4. Analyzes the code for completion criteria:
+   - Locked state removed
+   - Data fetching implemented
+   - Metrics displayed correctly
+   - High performers highlighted
+   - Sorting, loading, and error handling
+5. Analyzes git history for velocity metrics
+6. Calculates the total score across all categories
+7. Submits results to Supabase (if configured)
+8. Creates a score artifact for review
+
+### Required Secrets
+
+The workflow requires these repository secrets to be configured:
 - `SUPABASE_URL` - Your Supabase project URL
 - `SUPABASE_SERVICE_KEY` - Service role key for admin access
+
+These are automatically injected when the assessment repository is created.
 
 ## Interpreting Scores
 
@@ -155,44 +114,20 @@ gh workflow run score_assessment.yaml \
 | 30-49 | Developing - Not ready for 0→1 startup |
 | < 30 | Not a fit - Needs more experience |
 
-## Adding Custom Tests
+## Modifying the Workflow
 
-To add a new test criteria:
+To customize the scoring criteria or add new checks:
 
-1. Add the test in the appropriate file
-2. Update the results collector in `assessment-scoring.test.ts`
-3. Update the score calculation
-4. Update the GitHub Actions workflow
-5. Update this README
+1. Edit `.github/workflows/score_assessment.yaml`
+2. Update the scoring logic in the workflow steps
+3. Adjust point allocations as needed
+4. Update this documentation to reflect changes
 
-## Development
+## Viewing Results
 
-```bash
-# Watch mode
-npm run test:watch
-
-# Coverage report
-npm run test:coverage
-```
-
-## Troubleshooting
-
-### Tests fail to find files
-Set `PROJECT_ROOT` environment variable:
-```bash
-PROJECT_ROOT=/path/to/candidate/repo npm test
-```
-
-### API tests skip
-Start the dev server first:
-```bash
-npm run dev
-# In another terminal:
-npm run test:api
-```
-
-### Git history analysis fails
-Ensure you have git installed and the repo has commits:
-```bash
-git log --oneline
-```
+After the workflow completes:
+1. Go to the **Actions** tab in the GitHub repository
+2. Click on the latest workflow run
+3. View the score summary in the workflow logs
+4. Download the score artifact for detailed results
+5. Check Supabase for the submitted score data
