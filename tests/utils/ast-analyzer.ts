@@ -20,6 +20,10 @@ export interface ASTAnalysisResult {
     hookCalls: string[];
     stateVariables: string[];
     apiEndpoints: string[];
+    // Property access detection (replaces regex checks)
+    propertyAccesses: string[];
+    hasViralScoreAccess: boolean;
+    hasViewsAccess: boolean;
 }
 
 /**
@@ -38,6 +42,9 @@ export function analyzeCode(code: string): ASTAnalysisResult {
         hookCalls: [],
         stateVariables: [],
         apiEndpoints: [],
+        propertyAccesses: [],
+        hasViralScoreAccess: false,
+        hasViewsAccess: false,
     };
 
     try {
@@ -124,6 +131,23 @@ function walkNode(node: TSESTree.Node, result: ASTAnalysisResult): void {
         result.hasConditionalExpression = true;
     }
 
+    // Check for property access: item.viral_score, data.views, etc.
+    if (node.type === 'MemberExpression') {
+        const property = node.property;
+        if (property.type === 'Identifier') {
+            const propName = property.name;
+            result.propertyAccesses.push(propName);
+
+            // Check for specific properties
+            if (propName === 'viral_score') {
+                result.hasViralScoreAccess = true;
+            }
+            if (propName === 'views') {
+                result.hasViewsAccess = true;
+            }
+        }
+    }
+
     // Check for variable declarations with useState
     if (node.type === 'VariableDeclarator') {
         if (node.init?.type === 'CallExpression') {
@@ -193,4 +217,22 @@ export function hasArrayMapping(code: string): boolean {
 export function hasConditionalRendering(code: string): boolean {
     const analysis = analyzeCode(code);
     return analysis.hasConditionalExpression;
+}
+
+/**
+ * Check if code accesses viral_score property
+ * Replaces regex-based check to prevent false positives from comments/strings
+ */
+export function hasViralScoreProperty(code: string): boolean {
+    const analysis = analyzeCode(code);
+    return analysis.hasViralScoreAccess;
+}
+
+/**
+ * Check if code accesses views property
+ * Replaces regex-based check to prevent false positives from comments/strings
+ */
+export function hasViewsProperty(code: string): boolean {
+    const analysis = analyzeCode(code);
+    return analysis.hasViewsAccess;
 }

@@ -1,13 +1,12 @@
 /**
  * Assessment Scoring Tests - Core Completion Requirements
  * 
- * HYBRID APPROACH: Static analysis (AST) + Integration tests (RTL)
+ * INTEGRATION-FIRST APPROACH: RTL integration tests + AST analysis
  * 
- * Total: 35 points
- * - Locked State Removed: 5 points (static)
- * - Data Fetching + Display: 15 points (integration - actually renders)
- * - Metrics Display: 5 points (static - field names)
- * - High Performers: 10 points (integration - styling applied)
+ * Total: 30 points (reduced from 35 after removing regex-based tests)
+ * - Locked State Removed: 5 points (static text checks)
+ * - Data Fetching + Display: 20 points (integration - actually renders with correct data)
+ * - High Performers: 5 points (integration - styling actually applied)
  */
 
 import { describe, it, expect, vi, beforeEach } from 'vitest';
@@ -39,18 +38,6 @@ describe('Core Requirements (35 points)', () => {
 
         it('should not display the locked placeholder message', () => {
             expect(insightsPageContent).not.toContain('Complete the mission to unlock');
-        });
-    });
-
-    describe('Metrics Display - Field Names (5 points)', () => {
-        it('should reference viral_score field', () => {
-            const hasViralScore = /viral[_\s]?score/i.test(insightsPageContent);
-            expect(hasViralScore).toBe(true);
-        });
-
-        it('should reference views field', () => {
-            const hasViews = /\bviews\b/i.test(insightsPageContent);
-            expect(hasViews).toBe(true);
         });
     });
 
@@ -191,18 +178,6 @@ describe('Core Requirements (35 points)', () => {
             expect(highElement?.className).toBeTruthy();
             expect(normalElement?.className).toBeTruthy();
             expect(highElement?.className).not.toBe(normalElement?.className);
-        });
-
-        it('should have conditional logic for high performers', () => {
-            // Static check: verify comparison logic exists
-            const hasHighPerformerLogic = /(viral[_\s]?score|score)\s*[>>=]\s*\d+|isHigh|highPerformer|highlight/i.test(insightsPageContent);
-            expect(hasHighPerformerLogic).toBe(true);
-        });
-
-        it('should have conditional rendering/styling code', () => {
-            // Static check: verify ternary or conditional exists
-            const hasConditional = /\?.*:|\&\&|className=\{/i.test(insightsPageContent);
-            expect(hasConditional).toBe(true);
         });
     });
 });

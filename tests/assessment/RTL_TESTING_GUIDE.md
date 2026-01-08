@@ -9,16 +9,16 @@ This guide explains how to test the RTL (React Testing Library) integration test
 ## Test Scenarios
 
 ### Scenario 1: Blank Slate (Seed Repo)
-**Expected Score: 5/35 points (3/13 tests pass)**
+**Expected Score: 10/30 points (3/9 tests pass)**
 
 ### Scenario 2: Minimal Implementation
-**Expected Score: 15-20/35 points (6-8/13 tests pass)**
+**Expected Score: 20-25/30 points (7-8/9 tests pass)**
 
 ### Scenario 3: Full Implementation
-**Expected Score: 35/35 points (13/13 tests pass)**
+**Expected Score: 30/30 points (9/9 tests pass)**
 
 ### Scenario 4: Broken Implementation
-**Expected Score: 5-10/35 points (3-4/13 tests pass)**
+**Expected Score: 10-15/30 points (3-5/9 tests pass)**
 
 ---
 
@@ -48,10 +48,6 @@ yarn test tests/assessment/completion.test.tsx
   ✅ should not have "Locked" in title
   ✅ should not display placeholder
 
-❌ Metrics Display (0/2)
-  ❌ should reference viral_score
-  ❌ should reference views
-
 ❌ Data Fetching (0/5)
   ❌ should fetch and render data
   ❌ should display viral_score values
@@ -59,19 +55,22 @@ yarn test tests/assessment/completion.test.tsx
   ❌ should map multiple items
   ❌ should have data fetching code
 
-❌ High Performers (0/3)
+❌ High Performers (0/1)
   ❌ should apply different styling
-  ❌ should have conditional logic
-  ❌ should have conditional code
 
-Score: 3/13 tests = ~8/35 points
+Score: 3/9 tests = ~10/30 points
 ```
 
 ### Verification Checklist
 - [ ] Exactly 3 tests pass
 - [ ] All 3 passing tests are from "Locked State Removed"
 - [ ] All integration tests fail (can't find elements in DOM)
-- [ ] All static analysis tests fail (no code patterns found)
+- [ ] AST analysis tests fail (no code patterns found)
+
+### Notes
+- **Regex tests removed**: No longer checking for field names via regex (prevented false positives)
+- **Integration-first**: All functional tests now verify actual DOM rendering
+- **Total reduced**: From 35 points to 30 points after removing regex-based tests
 
 ---
 
