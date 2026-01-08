@@ -85,6 +85,8 @@ You have the tools. Get this running in **5 minutes**. The clock starts now.
    *(If `yarn` is not found, install it: `npm install -g yarn`)*
    
    > **Windows users:** If you encounter permission issues, try running your terminal as Administrator or use `npm install` instead.
+   
+   > **Note:** The setup script will automatically configure Cursor hooks for prompt tracking.
 
 3. **Set Up Environment Variables**
    
@@ -151,7 +153,25 @@ You have the tools. Get this running in **5 minutes**. The clock starts now.
    yarn dev
    ```
 
-6. **Open Your Browser**
+6. **Setup Cursor Hooks (Automatic Prompt Tracking)**
+   
+   The setup script automatically configures Cursor hooks for tracking AI prompts. After `yarn install`:
+   
+   - ✅ Cursor hooks are automatically configured
+   - ⚠️ **IMPORTANT:** Restart Cursor IDE to activate hooks
+   
+   **What this means:**
+   - Use Cursor normally with your own API keys (GPT-4, Claude, Gemini, etc.)
+   - All prompts are tracked automatically in the background
+   - No Cursor settings configuration needed
+   - Hooks work with any AI model you use in Cursor
+   
+   **⚠️ Known Issue:** There's a known bug in Cursor (versions 2.1.25+ on Windows) where `beforeSubmitPrompt` hooks may be called but not receive prompt data. If prompts aren't being logged:
+   - Check Cursor's Output panel (Output tab → "Hooks" dropdown) to see what data Cursor is sending
+   - Update Cursor to the latest version
+   - Check `.cursor/logs/prompts-YYYYMMDD.log` for debug information
+
+7. **Open Your Browser**
    Navigate to [http://localhost:3000](http://localhost:3000)
 
 ### 🎯 Key Files: The Data Flywheel Components
@@ -191,6 +211,8 @@ You have the tools. Get this running in **5 minutes**. The clock starts now.
 - **Module not found errors** → Run `yarn install` again
 - **Windows: "touch is not recognized"** → Use `New-Item .env.local` in PowerShell or create the file manually
 - **Windows: Permission denied** → Run your terminal as Administrator or use a different port
+- **Cursor hooks not found** → Make sure the `.cursor/` directory with hooks exists in the repository
+- **Hooks not working** → Make sure you restarted Cursor IDE completely after setup
 
 ### 📚 Resources
 

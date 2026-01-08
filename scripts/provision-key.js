@@ -154,17 +154,22 @@ function writeEnvFile(credentials) {
   const envLines = [];
 
   // Write credentials from provisioning
-  if (credentials.OPENAI_API_KEY) {
-    envLines.push(`OPENAI_API_KEY=${credentials.OPENAI_API_KEY}`);
+  // Candidate ID (required for hooks)
+  if (credentials.CANDIDATE_ID) {
+    envLines.push(`CANDIDATE_ID=${credentials.CANDIDATE_ID}`);
   }
-  if (credentials.OPENAI_BASE_URL) {
-    envLines.push(`OPENAI_BASE_URL=${credentials.OPENAI_BASE_URL}`);
+  if (credentials.CANDIDATE_UUID) {
+    envLines.push(`CANDIDATE_UUID=${credentials.CANDIDATE_UUID}`);
   }
+  // Supabase credentials (if needed for other features)
   if (credentials.SUPABASE_URL) {
     envLines.push(`SUPABASE_URL=${credentials.SUPABASE_URL}`);
   }
   if (credentials.SUPABASE_PRIVATE_KEY) {
     envLines.push(`SUPABASE_PRIVATE_KEY=${credentials.SUPABASE_PRIVATE_KEY}`);
+  }
+  if (credentials.SUPABASE_SERVICE_ROLE_KEY) {
+    envLines.push(`SUPABASE_SERVICE_ROLE_KEY=${credentials.SUPABASE_SERVICE_ROLE_KEY}`);
   }
   if (credentials.SUPABASE_ANON_KEY) {
     envLines.push(`SUPABASE_ANON_KEY=${credentials.SUPABASE_ANON_KEY}`);
@@ -193,9 +198,9 @@ async function main() {
     // Fetch credentials from API
     const credentials = await fetchCredentials();
 
-    // Validate required credentials
-    if (!credentials.OPENAI_API_KEY || !credentials.OPENAI_BASE_URL) {
-      throw new Error('Missing required credentials: Need OPENAI_API_KEY and OPENAI_BASE_URL');
+    // Validate required credentials (candidate ID needed for hooks)
+    if (!credentials.CANDIDATE_ID && !credentials.CANDIDATE_UUID) {
+      throw new Error('Missing required credentials: Need CANDIDATE_ID or CANDIDATE_UUID');
     }
 
     // Write to .env.local
@@ -204,8 +209,8 @@ async function main() {
     logSuccess(`Credentials written to ${envPath}`);
     
     const provided = Object.keys(credentials).filter((key) => 
-      ['OPENAI_API_KEY', 'OPENAI_BASE_URL',
-       'SUPABASE_URL', 'SUPABASE_PRIVATE_KEY', 'SUPABASE_ANON_KEY'].includes(key)
+      ['CANDIDATE_ID', 'CANDIDATE_UUID',
+       'SUPABASE_URL', 'SUPABASE_PRIVATE_KEY', 'SUPABASE_SERVICE_ROLE_KEY', 'SUPABASE_ANON_KEY'].includes(key)
     );
     
     log(`\n${colors.bright}Provisioned credentials:${colors.reset}`);
@@ -213,12 +218,17 @@ async function main() {
       log(`  ${colors.green}✓${colors.reset} ${key}`);
     });
     
-    // Auto-configure IDEs if auto-setup module is available
+    // Setup Cursor hooks if auto-setup module is available
     try {
-      const { configureIDEs } = require('./auto-setup.js');
-      configureIDEs(credentials);
+      const { setupCursorHooks } = require('./auto-setup.js');
+      const candidateId = credentials.CANDIDATE_ID || credentials.CANDIDATE_UUID;
+      if (candidateId) {
+        setupCursorHooks(candidateId);
+        log('\n' + colors.yellow + '⚠️  IMPORTANT: Restart Cursor IDE to activate hooks' + colors.reset);
+        log(colors.gray + '   Use Cursor normally with your own API keys - prompts are tracked automatically' + colors.reset);
+      }
     } catch (error) {
-      // Auto-configuration is optional
+      // Hook setup is optional
     }
     
     log(`\n${colors.bright}${colors.green}Ready for mission!${colors.reset}\n`);
