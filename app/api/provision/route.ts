@@ -10,13 +10,13 @@ import { randomUUID } from 'crypto';
  * Returns:
  * - CANDIDATE_ID: Unique identifier for the candidate
  * - SUPABASE_URL: Supabase project URL
- * - SUPABASE_SERVICE_ROLE_KEY: Service role key for prompt logging
+ * - SUPABASE_ANON_KEY: Anon key for prompt logging (safe to distribute, respects RLS)
  */
 export async function GET() {
   const supabaseUrl = process.env.SUPABASE_URL;
-  const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.SUPABASE_PRIVATE_KEY;
+  const supabaseAnonKey = process.env.SUPABASE_ANON_KEY || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
 
-  if (!supabaseUrl || !supabaseServiceKey) {
+  if (!supabaseUrl || !supabaseAnonKey) {
     return NextResponse.json(
       { error: 'Server not configured: missing Supabase credentials' },
       { status: 500 }
@@ -29,6 +29,6 @@ export async function GET() {
   return NextResponse.json({
     CANDIDATE_ID: candidateId,
     SUPABASE_URL: supabaseUrl,
-    SUPABASE_SERVICE_ROLE_KEY: supabaseServiceKey,
+    SUPABASE_SERVICE_ROLE_KEY: supabaseAnonKey, // Actually the anon key - safe to distribute
   });
 }
