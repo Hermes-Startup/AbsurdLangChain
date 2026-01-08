@@ -34,6 +34,10 @@ yarn-error.log*
 # Cursor hooks logs (keep hooks directory, ignore logs)
 .cursor/logs/
 
+# Hermes interview configuration (actual config with session ID, keep example)
+.hermes/config.json
+!.hermes/config.json.example
+
 # Windows reserved filenames
 nul
 CON
