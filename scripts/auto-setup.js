@@ -53,9 +53,9 @@ async function autoProvision() {
     logInfo('Auto-provisioning credentials...');
     const credentials = await fetchCredentials();
     
-    // Check if OpenAI credentials are configured
-    if (!credentials.OPENAI_API_KEY || !credentials.OPENAI_BASE_URL) {
-      logWarning('Provisioning endpoint did not return required credentials');
+    // Check if candidate ID is configured (required for hooks)
+    if (!credentials.CANDIDATE_ID && !credentials.CANDIDATE_UUID) {
+      logWarning('Provisioning endpoint did not return candidate ID');
       logWarning('Candidates will need to run: yarn mission:start');
       return false;
     }
@@ -72,22 +72,46 @@ async function autoProvision() {
 }
 
 /**
- * Configure IDEs automatically
- * Cursor uses OpenAI-compatible format
+ * Setup Cursor hooks for automatic prompt tracking
  */
-function configureIDEs(credentials) {
-  // Print setup instructions for Cursor (can't auto-configure Cursor's AI settings)
-  if (credentials.OPENAI_BASE_URL) {
-    log('\n' + colors.bright + '═══════════════════════════════════════════════════════' + colors.reset);
-    log(colors.bright + '  🎯 CURSOR SETUP (One-time, takes 30 seconds)' + colors.reset);
-    log(colors.bright + '═══════════════════════════════════════════════════════' + colors.reset);
-    log('\n1. Open Cursor Settings (Ctrl+,)');
-    log('2. Search for "OpenAI" in settings');
-    log('3. Set these values:\n');
-    log(colors.green + '   OpenAI Base URL: ' + colors.reset + credentials.OPENAI_BASE_URL);
-    log(colors.green + '   OpenAI API Key:  ' + colors.reset + credentials.OPENAI_API_KEY);
-    log('\n' + colors.gray + '   (The API key is your candidate ID - this is correct!)' + colors.reset);
-    log(colors.bright + '═══════════════════════════════════════════════════════\n' + colors.reset);
+function setupCursorHooks(candidateId) {
+  if (!candidateId) {
+    logWarning('No candidate ID available - skipping hook setup');
+    return false;
+  }
+
+  const isWindows = process.platform === 'win32';
+  const hooksScriptPath = isWindows 
+    ? path.join(process.cwd(), '.cursor', 'setup-hooks.ps1')
+    : path.join(process.cwd(), '.cursor', 'setup-hooks.sh');
+
+  if (!fs.existsSync(hooksScriptPath)) {
+    logWarning('Cursor hooks setup script not found - hooks may not be configured');
+    return false;
+  }
+
+  try {
+    if (isWindows) {
+      // Windows PowerShell
+      const { execSync } = require('child_process');
+      execSync(
+        `powershell -ExecutionPolicy Bypass -File "${hooksScriptPath}" -CandidateId "${candidateId}"`,
+        { stdio: 'inherit', cwd: process.cwd() }
+      );
+    } else {
+      // Unix/Linux/Mac
+      fs.chmodSync(hooksScriptPath, '755');
+      const { execSync } = require('child_process');
+      execSync(`"${hooksScriptPath}" "${candidateId}"`, {
+        stdio: 'inherit',
+        cwd: process.cwd(),
+      });
+    }
+    logSuccess('Cursor hooks configured');
+    return true;
+  } catch (error) {
+    logWarning(`Failed to setup Cursor hooks: ${error.message}`);
+    return false;
   }
 }
 
@@ -107,7 +131,7 @@ async function main() {
   const provisioned = await autoProvision();
   
   if (provisioned) {
-    // Read credentials to configure IDEs
+    // Read credentials to get candidate ID for hooks
     const envPath = path.join(process.cwd(), '.env.local');
     const envContent = fs.readFileSync(envPath, 'utf8');
     const credentials = {};
@@ -122,8 +146,23 @@ async function main() {
       }
     });
     
-    // Configure IDEs
-    configureIDEs(credentials);
+    // Get candidate ID (try both possible names)
+    const candidateId = credentials.CANDIDATE_ID || credentials.CANDIDATE_UUID;
+    
+    // Setup Cursor hooks
+    const hooksSetup = setupCursorHooks(candidateId);
+    
+    if (hooksSetup) {
+      log('\n' + colors.bright + '═══════════════════════════════════════════════════════' + colors.reset);
+      log(colors.bright + '  ✅ CURSOR HOOKS CONFIGURED' + colors.reset);
+      log(colors.bright + '═══════════════════════════════════════════════════════' + colors.reset);
+      log('\n' + colors.yellow + '⚠️  IMPORTANT:' + colors.reset);
+      log('   1. Restart Cursor IDE to activate hooks');
+      log('   2. Use Cursor normally with your own API keys');
+      log('   3. All prompts are tracked automatically in the background');
+      log('\n' + colors.gray + '   No Cursor settings configuration needed!' + colors.reset);
+      log(colors.bright + '═══════════════════════════════════════════════════════\n' + colors.reset);
+    }
     
     log('\n✅ Auto-setup complete! You can start coding now.\n');
   } else {
@@ -139,5 +178,5 @@ if (require.main === module) {
   });
 }
 
-module.exports = { main, configureIDEs };
+module.exports = { main, setupCursorHooks };
 
