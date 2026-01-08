@@ -11,44 +11,15 @@ Our creative engine generates video scripts, tracks their performance, and feeds
 
 ---
 
-## 🎯 MISSION OBJECTIVES
+## 🔴 THE PROBLEM
 
-The Absurd Data Flywheel has three critical breakpoints. Fix these to restore the feedback loop:
+The **Absurd Data Flywheel** is broken. Our creative engine should generate video scripts, track their performance, and feed insights back to improve future scripts. This feedback loop is the core of our product—without it, we're flying blind.
 
-### 1. Restore Context Retrieval (The Learning Loop)
-**Status:** 🔴 BROKEN
+**Your mission:** Restore the flywheel. Get performance insights flowing from the database back into the UI. The data exists in `performance_logs`, but creatives can't see it.
 
-The agent in `app/api/chat/retrieval/route.ts` should be learning from our viral history, but it's not. The similarity threshold is misconfigured, so scripts aren't grounded in what actually works.
+**Time limit:** 20 minutes
 
-* **Task:** Fix the similarity threshold in the LangChain `ChatGoogleGenerativeAI` node.
-* **Impact:** Without this, agents can't learn from past performance—the flywheel can't spin.
-* **Files:** `app/api/chat/retrieval/route.ts`
-
-### 2. Enable Search Grounding (Real-Time Context)
-**Status:** 🔴 BROKEN
-
-Scripts need to be grounded in *today's* trends, not just historical data. The founder's directive: pull live search results.
-
-* **Task:** Enable **Google Search Grounding** in the Gemini model config.
-* **Constraint:** **5 minutes max.** If the agent isn't pulling live search results, the demo fails.
-* **Files:** `app/api/chat/agents/route.ts` (or relevant agent endpoint)
-
-### 3. Build the Insights Dashboard (The Feedback Loop)
-**Status:** 🔴 CRITICAL - THIS IS THE FLYWHEEL
-
-This is the **core breakpoint**. The creatives can't see performance data, so they can't learn what drives virality. The data exists in `performance_logs`, but there's no UI to surface it. Without insights, the flywheel stops dead.
-
-* **Task:** Build the Insights tab to:
-  - Fetch performance data from the API
-  - Display scripts with their metrics (views, likes, shares, viral_score)
-  - Generate Gemini-powered summaries explaining why ads go viral
-* **Files:** 
-  - `app/insights/page.tsx` (currently locked)
-  - `app/api/insights/performance/route.ts` (already exists)
-  - `app/api/insights/generate-summary/route.ts` (needs implementation)
-* **Impact:** This closes the loop. Creatives see what works → agents learn from patterns → better scripts → more data → flywheel spins.
-
-**Priority:** Focus on Objective #3. This is the Data Flywheel's core mechanism.
+**Success criteria:** Performance data visible in the UI, metrics displayed, high performers highlighted.
 
 ---
 
@@ -154,23 +125,7 @@ You have the tools. Get this running in **5 minutes**. The clock starts now.
 6. **Open Your Browser**
    Navigate to [http://localhost:3000](http://localhost:3000)
 
-### 🎯 Key Files: The Data Flywheel Components
 
-**Core Flywheel Files (Priority Order):**
-- **`app/insights/page.tsx`** - 🔒 **CRITICAL:** The Insights dashboard (currently locked - this is the flywheel's feedback mechanism)
-- **`app/api/insights/performance/route.ts`** - Fetches performance metrics (views, likes, shares, viral_score)
-- **`app/api/insights/generate-summary/route.ts`** - Generates Gemini summaries explaining viral performance patterns
-
-**Agent & Retrieval Files:**
-- **`app/api/chat/retrieval/route.ts`** - Retrieval agent (needs similarity threshold fix)
-- **`app/api/chat/agents/route.ts`** - Agent with tool calling (needs search grounding)
-- **`app/api/chat/route.ts`** - Simple chat endpoint
-- **`app/api/chat/structured_output/route.ts`** - Structured output example
-
-**Data Layer:**
-- **`supabase/migrations/001_initial_schema.sql`** - Database schema (video_scripts, performance_logs)
-- **`supabase/migrations/002_seed_data.sql`** - Seed data with performance metrics
-- **`data/insights/seed-data.ts`** - Mock performance data (used if DB not configured)
 
 ### 🧪 Test Your Setup
 

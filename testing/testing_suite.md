@@ -63,38 +63,15 @@ Sabotage detection:
 - SQL index exists in migrations
 - **-10 point penalty** if missing
 
-## Scoring Rubric
+## Scoring
 
-### Build & Types (15 points)
-| Criteria | Points |
-|----------|--------|
-| Valid package.json | 5 |
-| Required dependencies | 5 |
-| TypeScript configuration | 5 |
+Tests are organized into categories:
+- **Build & Types**: Compilation and TypeScript correctness
+- **Core Requirements**: Basic functionality (data fetching, display, highlighting)
+- **Enhanced Features**: Advanced implementation (sorting, loading states, error handling, AI integration)
+- **AI Usage**: Manual evaluation from reflection form
 
-### Core Requirements (35 points)
-| Criteria | Points |
-|----------|--------|
-| Locked state removed | 5 |
-| Data fetching from API | 10 |
-| Metrics displayed | 10 |
-| High performers highlighted | 10 |
-
-### Enhanced Features (25 points)
-| Criteria | Points |
-|----------|--------|
-| Sorting by viral_score | 5 |
-| Loading state | 5 |
-| Error handling | 5 |
-| Gemini integration | 10 |
-
-### AI Usage (20 points) - Manual
-| Criteria | Points |
-|----------|--------|
-| Used AI appropriately | 5 |
-| Prompts were specific | 5 |
-| Identified AI mistakes | 5 |
-| Could override when needed | 5 |
+Run `yarn test` to see which tests pass and understand what's expected.
 
 ## GitHub Actions Workflow
 
