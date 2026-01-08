@@ -194,7 +194,7 @@ $requestBody = @{
     p_provider = "cursor-hooks"
     p_tool_name = "Cursor"
     p_user_agent = "Cursor/$(Get-Date -Format 'yyyyMMddHHmmss')"
-    p_model_requested = "unknown"
+    p_model_requested = if ($inputJson.model) { $inputJson.model } else { "unknown" }
     p_request_metadata = @{} | ConvertTo-Json -Compress
 } | ConvertTo-Json -Compress
 

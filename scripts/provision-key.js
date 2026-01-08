@@ -66,7 +66,7 @@ function loadLocalEnv() {
 loadLocalEnv();
 
 // Get provisioning API endpoint from environment or use default
-const PROVISION_API_URL = process.env.QUARTERMASTER_API_URL || process.env.PROVISION_API_URL || 'https://api.example.com/provision';
+const PROVISION_API_URL = process.env.QUARTERMASTER_API_URL || process.env.PROVISION_API_URL || 'https://joinhermes.co/api/provision';
 
 /**
  * Fetch credentials from provisioning API

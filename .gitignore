@@ -29,6 +29,7 @@ yarn-error.log*
 
 # Cursor IDE configuration (user-specific, auto-generated)
 .cursor/config.json
+.cursor/hooks.json
 
 # Cursor hooks logs (keep hooks directory, ignore logs)
 .cursor/logs/
