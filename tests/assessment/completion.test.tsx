@@ -3,10 +3,13 @@
  * 
  * INTEGRATION-FIRST APPROACH: RTL integration tests + AST analysis
  * 
- * Total: 30 points (reduced from 35 after removing regex-based tests)
+ * Total: 30 points (Core Requirements)
  * - Locked State Removed: 5 points (static text checks)
  * - Data Fetching + Display: 20 points (integration - actually renders with correct data)
  * - High Performers: 5 points (integration - styling actually applied)
+ * 
+ * Additional 15 points for Error Handling & UX are tested in error-handling.test.tsx
+ * Grand Total: 45 points across all assessment tests
  */
 
 import { describe, it, expect, vi, beforeEach } from 'vitest';

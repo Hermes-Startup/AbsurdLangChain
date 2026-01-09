@@ -296,3 +296,72 @@ jobs:
           name: assessment-score
           path: artifacts/score-summary.json
           retention-days: 90
+
+      - name: Notify Hermes Interview System
+        if: success()
+        run: |
+          # Check if config exists (gracefully skip if not interview repo)
+          if [ ! -f .hermes/config.json ]; then
+            echo "⚠️  .hermes/config.json not found - skipping Hermes notification"
+            echo "ℹ️  This is normal for non-interview repositories"
+            exit 0
+          fi
+          
+          # Read config
+          SESSION_ID=$(jq -r .sessionId .hermes/config.json)
+          API_BASE_URL=$(jq -r .apiBaseUrl .hermes/config.json)
+          
+          if [ "$SESSION_ID" == "null" ] || [ -z "$SESSION_ID" ] || [ "$SESSION_ID" == "session_EXAMPLE_REPLACE_WITH_ACTUAL_SESSION_ID" ]; then
+            echo "⚠️  Invalid or missing sessionId - skipping Hermes notification"
+            exit 0
+          fi
+          
+          if [ "$API_BASE_URL" == "null" ] || [ -z "$API_BASE_URL" ]; then
+            echo "⚠️  Invalid or missing apiBaseUrl - skipping Hermes notification"
+            exit 0
+          fi
+          
+          echo "📤 Notifying Hermes orchestrator..."
+          echo "   Session ID: $SESSION_ID"
+          echo "   API URL: $API_BASE_URL/test"
+          
+          # Determine test status based on scores
+          TOTAL_SCORE=${{ steps.calculate.outputs.total_score }}
+          TEST_STATUS="success"
+          if [ "$TOTAL_SCORE" -lt 1 ]; then
+            TEST_STATUS="failed"
+          fi
+          
+          # Notify Hermes that tests completed
+          RESPONSE=$(curl -s -w "\n%{http_code}" -X POST "$API_BASE_URL/test" \
+            -H "Content-Type: application/json" \
+            -d "{
+              \"sessionId\": \"$SESSION_ID\",
+              \"testData\": {
+                \"status\": \"$TEST_STATUS\",
+                \"conclusion\": \"$TEST_STATUS\",
+                \"head_sha\": \"${{ github.sha }}\",
+                \"workflow_run_id\": \"${{ github.run_id }}\",
+                \"workflow_name\": \"${{ github.workflow }}\",
+                \"details_url\": \"${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}\",
+                \"repository\": \"${{ github.repository }}\",
+                \"scores\": {
+                  \"total\": $TOTAL_SCORE,
+                  \"build\": ${{ steps.calculate.outputs.build_score }},
+                  \"completion\": ${{ steps.calculate.outputs.completion_score }},
+                  \"enhanced\": ${{ steps.calculate.outputs.enhanced_score }}
+                }
+              }
+            }")
+          
+          HTTP_CODE=$(echo "$RESPONSE" | tail -n1)
+          BODY=$(echo "$RESPONSE" | sed '$d')
+          
+          if [ "$HTTP_CODE" -ge 200 ] && [ "$HTTP_CODE" -lt 300 ]; then
+            echo "✅ Hermes notification sent successfully (HTTP $HTTP_CODE)"
+            echo "Response: $BODY"
+          else
+            echo "⚠️  Hermes notification may have failed (HTTP $HTTP_CODE)"
+            echo "Response: $BODY"
+            # Don't fail the workflow - this is non-critical
+          fi

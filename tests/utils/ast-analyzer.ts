@@ -24,6 +24,14 @@ export interface ASTAnalysisResult {
     propertyAccesses: string[];
     hasViralScoreAccess: boolean;
     hasViewsAccess: boolean;
+    // Error handling detection
+    hasTryCatch: boolean;
+    hasCatchBlock: boolean;
+    hasCatchMethod: boolean;
+    hasErrorState: boolean;
+    hasLoadingState: boolean;
+    hasErrorBoundary: boolean;
+    errorHandlingPatterns: string[];
 }
 
 /**
@@ -45,6 +53,14 @@ export function analyzeCode(code: string): ASTAnalysisResult {
         propertyAccesses: [],
         hasViralScoreAccess: false,
         hasViewsAccess: false,
+        // Error handling
+        hasTryCatch: false,
+        hasCatchBlock: false,
+        hasCatchMethod: false,
+        hasErrorState: false,
+        hasLoadingState: false,
+        hasErrorBoundary: false,
+        errorHandlingPatterns: [],
     };
 
     try {
@@ -117,11 +133,18 @@ function walkNode(node: TSESTree.Node, result: ASTAnalysisResult): void {
             }
         }
 
-        // Member expression calls: array.map(), data.map(), etc.
+        // Member expression calls: array.map(), data.map(), promise.catch(), etc.
         if (callee.type === 'MemberExpression') {
             const property = callee.property;
-            if (property.type === 'Identifier' && property.name === 'map') {
-                result.hasMapCall = true;
+            if (property.type === 'Identifier') {
+                if (property.name === 'map') {
+                    result.hasMapCall = true;
+                }
+                // Detect .catch() method for promise error handling
+                if (property.name === 'catch') {
+                    result.hasCatchMethod = true;
+                    result.errorHandlingPatterns.push('promise.catch()');
+                }
             }
         }
     }
@@ -129,6 +152,17 @@ function walkNode(node: TSESTree.Node, result: ASTAnalysisResult): void {
     // Check for conditional expressions (ternary)
     if (node.type === 'ConditionalExpression') {
         result.hasConditionalExpression = true;
+    }
+
+    // Check for try-catch statements
+    if (node.type === 'TryStatement') {
+        result.hasTryCatch = true;
+        result.errorHandlingPatterns.push('try-catch');
+    }
+
+    // Check for catch clause
+    if (node.type === 'CatchClause') {
+        result.hasCatchBlock = true;
     }
 
     // Check for property access: item.viral_score, data.views, etc.
@@ -157,9 +191,34 @@ function walkNode(node: TSESTree.Node, result: ASTAnalysisResult): void {
                 if (node.id.type === 'ArrayPattern' && node.id.elements.length > 0) {
                     const firstElement = node.id.elements[0];
                     if (firstElement?.type === 'Identifier') {
+                        const varName = firstElement.name.toLowerCase();
                         result.stateVariables.push(firstElement.name);
+
+                        // Check for error state (error, err, isError, hasError)
+                        if (varName.includes('error') || varName === 'err') {
+                            result.hasErrorState = true;
+                            result.errorHandlingPatterns.push(`useState:${firstElement.name}`);
+                        }
+
+                        // Check for loading state (loading, isLoading, fetching, pending)
+                        if (varName.includes('loading') || varName.includes('fetching') || varName.includes('pending')) {
+                            result.hasLoadingState = true;
+                        }
                     }
                 }
+            }
+        }
+    }
+
+    // Check for ErrorBoundary import or usage
+    if (node.type === 'ImportDeclaration') {
+        const source = (node as any).source?.value || '';
+        const specifiers = (node as any).specifiers || [];
+        for (const spec of specifiers) {
+            const name = spec.local?.name || spec.imported?.name || '';
+            if (name.toLowerCase().includes('errorboundary')) {
+                result.hasErrorBoundary = true;
+                result.errorHandlingPatterns.push('ErrorBoundary');
             }
         }
     }
@@ -235,4 +294,36 @@ export function hasViralScoreProperty(code: string): boolean {
 export function hasViewsProperty(code: string): boolean {
     const analysis = analyzeCode(code);
     return analysis.hasViewsAccess;
+}
+
+/**
+ * Check if code has error state management (useState with error variable)
+ */
+export function hasErrorStateManagement(code: string): boolean {
+    const analysis = analyzeCode(code);
+    return analysis.hasErrorState;
+}
+
+/**
+ * Check if code has loading state management (useState with loading variable)
+ */
+export function hasLoadingStateManagement(code: string): boolean {
+    const analysis = analyzeCode(code);
+    return analysis.hasLoadingState;
+}
+
+/**
+ * Check if code has try-catch blocks or .catch() method for error handling
+ */
+export function hasTryCatchBlock(code: string): boolean {
+    const analysis = analyzeCode(code);
+    return analysis.hasTryCatch || analysis.hasCatchMethod || analysis.hasCatchBlock;
+}
+
+/**
+ * Check if code uses ErrorBoundary component
+ */
+export function hasErrorBoundary(code: string): boolean {
+    const analysis = analyzeCode(code);
+    return analysis.hasErrorBoundary;
 }
