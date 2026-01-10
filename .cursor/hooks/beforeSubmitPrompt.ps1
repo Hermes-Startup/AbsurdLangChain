@@ -2,6 +2,18 @@
 # Logs the prompt to Supabase prompt_logs table
 # Cursor passes JSON via stdin with prompt data
 
+# #region agent log - script start
+# Use current directory to make path portable across projects
+$logPath = Join-Path (Get-Location) ".cursor" "debug.log"
+# Ensure .cursor directory exists
+$cursorDir = Join-Path (Get-Location) ".cursor"
+if (-not (Test-Path $cursorDir)) {
+    New-Item -ItemType Directory -Path $cursorDir -Force | Out-Null
+}
+$logEntry = "{`"sessionId`":`"debug-session`",`"runId`":`"initial`",`"hypothesisId`":`"A`",`"location`":`"beforeSubmitPrompt.ps1:5`",`"message`":`"PowerShell hook script started`",`"data`":{`"timestamp`":$(Get-Date -UFormat %s),`"logPath`":`"$logPath`"},`"timestamp`":$(Get-Date -UFormat %s)}"
+Add-Content -Path $logPath -Value $logEntry
+# #endregion
+
 # Create logs directory first
 $logsDir = ".cursor\logs"
 New-Item -ItemType Directory -Path $logsDir -Force | Out-Null
@@ -14,6 +26,10 @@ $inputJson = $null
 
 # Read from stdin using the standard input stream
 # This is the most reliable method when called from Cursor
+# #region agent log - stdin reading attempt 1
+$logEntry = "{`"sessionId`":`"debug-session`",`"runId`":`"initial`",`"hypothesisId`":`"A`",`"location`":`"beforeSubmitPrompt.ps1:18`",`"message`":`"Attempting stdin read method 1`",`"data`":{`"method`":`"OpenStandardInput`"},`"timestamp`":$(Get-Date -UFormat %s)}"
+Add-Content -Path $logPath -Value $logEntry
+# #endregion
 try {
     # Use the standard input stream with proper stream handling
     $stdin = [Console]::OpenStandardInput()
@@ -21,12 +37,36 @@ try {
     $rawInput = $reader.ReadToEnd()
     $reader.Close()
     $stdin.Close()
+    # #region agent log - stdin method 1 success
+    $logEntry = "{`"sessionId`":`"debug-session`",`"runId`":`"initial`",`"hypothesisId`":`"A`",`"location`":`"beforeSubmitPrompt.ps1:22`",`"message`":`"Stdin method 1 succeeded`",`"data`":{`"inputLength`":$($rawInput.Length)},`"timestamp`":$(Get-Date -UFormat %s)}"
+    Add-Content -Path $logPath -Value $logEntry
+    # #endregion
 } catch {
+    # #region agent log - stdin method 1 failed
+    $logEntry = "{`"sessionId`":`"debug-session`",`"runId`":`"initial`",`"hypothesisId`":`"A`",`"location`":`"beforeSubmitPrompt.ps1:26`",`"message`":`"Stdin method 1 failed`",`"data`":{`"error`":$($_.Exception.Message)},`"timestamp`":$(Get-Date -UFormat %s)}"
+    Add-Content -Path $logPath -Value $logEntry
+    # #endregion
     # Fallback: try ReadToEnd from Console::In
+    # #region agent log - stdin method 2 attempt
+    $logEntry = "{`"sessionId`":`"debug-session`",`"runId`":`"initial`",`"hypothesisId`":`"A`",`"location`":`"beforeSubmitPrompt.ps1:30`",`"message`":`"Attempting stdin method 2`",`"data`":{`"method`":`"Console.In.ReadToEnd`"},`"timestamp`":$(Get-Date -UFormat %s)}"
+    Add-Content -Path $logPath -Value $logEntry
+    # #endregion
     try {
         $rawInput = [Console]::In.ReadToEnd()
+        # #region agent log - stdin method 2 success
+        $logEntry = "{`"sessionId`":`"debug-session`",`"runId`":`"initial`",`"hypothesisId`":`"A`",`"location`":`"beforeSubmitPrompt.ps1:33`",`"message`":`"Stdin method 2 succeeded`",`"data`":{`"inputLength`":$($rawInput.Length)},`"timestamp`":$(Get-Date -UFormat %s)}"
+        Add-Content -Path $logPath -Value $logEntry
+        # #endregion
     } catch {
+        # #region agent log - stdin method 2 failed
+        $logEntry = "{`"sessionId`":`"debug-session`",`"runId`":`"initial`",`"hypothesisId`":`"A`",`"location`":`"beforeSubmitPrompt.ps1:37`",`"message`":`"Stdin method 2 failed`",`"data`":{`"error`":$($_.Exception.Message)},`"timestamp`":$(Get-Date -UFormat %s)}"
+        Add-Content -Path $logPath -Value $logEntry
+        # #endregion
         # Last resort: try reading line by line
+        # #region agent log - stdin method 3 attempt
+        $logEntry = "{`"sessionId`":`"debug-session`",`"runId`":`"initial`",`"hypothesisId`":`"A`",`"location`":`"beforeSubmitPrompt.ps1:41`",`"message`":`"Attempting stdin method 3`",`"data`":{`"method`":`"line by line`"},`"timestamp`":$(Get-Date -UFormat %s)}"
+        Add-Content -Path $logPath -Value $logEntry
+        # #endregion
         try {
             $lines = @()
             while ($true) {
@@ -35,7 +75,15 @@ try {
                 $lines += $line
             }
             $rawInput = $lines -join "`n"
+            # #region agent log - stdin method 3 success
+            $logEntry = "{`"sessionId`":`"debug-session`",`"runId`":`"initial`",`"hypothesisId`":`"A`",`"location`":`"beforeSubmitPrompt.ps1:48`",`"message`":`"Stdin method 3 succeeded`",`"data`":{`"inputLength`":$($rawInput.Length),`"linesCount`":$($lines.Count)},`"timestamp`":$(Get-Date -UFormat %s)}"
+            Add-Content -Path $logPath -Value $logEntry
+            # #endregion
         } catch {
+            # #region agent log - stdin method 3 failed
+            $logEntry = "{`"sessionId`":`"debug-session`",`"runId`":`"initial`",`"hypothesisId`":`"A`",`"location`":`"beforeSubmitPrompt.ps1:52`",`"message`":`"Stdin method 3 failed`",`"data`":{`"error`":$($_.Exception.Message)},`"timestamp`":$(Get-Date -UFormat %s)}"
+            Add-Content -Path $logPath -Value $logEntry
+            # #endregion
             $rawInput = $null
         }
     }
@@ -54,8 +102,16 @@ if ($rawInput -and $rawInput.Trim()) {
 
 # Parse JSON if we got input
 if ($rawInput -and $rawInput.Trim()) {
+    # #region agent log - JSON parsing attempt
+    $logEntry = "{`"sessionId`":`"debug-session`",`"runId`":`"initial`",`"hypothesisId`":`"B`",`"location`":`"beforeSubmitPrompt.ps1:58`",`"message`":`"Attempting JSON parse`",`"data`":{`"rawInputLength`":$($rawInput.Length)},`"timestamp`":$(Get-Date -UFormat %s)}"
+    Add-Content -Path $logPath -Value $logEntry
+    # #endregion
     try {
         $inputJson = $rawInput.Trim() | ConvertFrom-Json
+        # #region agent log - JSON parsing success
+        $logEntry = "{`"sessionId`":`"debug-session`",`"runId`":`"initial`",`"hypothesisId`":`"B`",`"location`":`"beforeSubmitPrompt.ps1:61`",`"message`":`"JSON parsing succeeded`",`"data`":{`"properties`":$($inputJson.PSObject.Properties.Name -join ', ')},`"timestamp`":$(Get-Date -UFormat %s)}"
+        Add-Content -Path $logPath -Value $logEntry
+        # #endregion
         $debugLog = "[$(Get-Date -Format 'yyyy-MM-ddTHH:mm:ss')] DEBUG: Parsed JSON successfully. Properties: $($inputJson.PSObject.Properties.Name -join ', ')"
         Add-Content -Path $logFile -Value $debugLog
         
@@ -70,6 +126,10 @@ if ($rawInput -and $rawInput.Trim()) {
         $debugLog = "[$(Get-Date -Format 'yyyy-MM-ddTHH:mm:ss')] DEBUG: All JSON properties: $($allProps -join '; ')"
         Add-Content -Path $logFile -Value $debugLog
     } catch {
+        # #region agent log - JSON parsing failed
+        $logEntry = "{`"sessionId`":`"debug-session`",`"runId`":`"initial`",`"hypothesisId`":`"B`",`"location`":`"beforeSubmitPrompt.ps1:73`",`"message`":`"JSON parsing failed`",`"data`":{`"error`":$($_.Exception.Message)},`"timestamp`":$(Get-Date -UFormat %s)}"
+        Add-Content -Path $logPath -Value $logEntry
+        # #endregion
         $debugLog = "[$(Get-Date -Format 'yyyy-MM-ddTHH:mm:ss')] DEBUG: Failed to parse JSON: $($_.Exception.Message)"
         Add-Content -Path $logFile -Value $debugLog
         $inputJson = $null
@@ -158,7 +218,16 @@ if (-not $promptText) {
 
 # Read configuration from hooks.json
 $hooksJsonPath = ".cursor/hooks.json"
+# #region agent log - config file check
+$configExists = Test-Path $hooksJsonPath
+$logEntry = "{`"sessionId`":`"debug-session`",`"runId`":`"initial`",`"hypothesisId`":`"E`",`"location`":`"beforeSubmitPrompt.ps1:161`",`"message`":`"Checking hooks.json existence`",`"data`":{`"exists`":$configExists},`"timestamp`":$(Get-Date -UFormat %s)}"
+Add-Content -Path $logPath -Value $logEntry
+# #endregion
 if (-not (Test-Path $hooksJsonPath)) {
+    # #region agent log - config file missing
+    $logEntry = "{`"sessionId`":`"debug-session`",`"runId`":`"initial`",`"hypothesisId`":`"E`",`"location`":`"beforeSubmitPrompt.ps1:164`",`"message`":`"hooks.json not found, exiting`",`"data`":{},`"timestamp`":$(Get-Date -UFormat %s)}"
+    Add-Content -Path $logPath -Value $logEntry
+    # #endregion
     Write-Output '{"continue":true}'
     exit 0
 }
@@ -168,7 +237,16 @@ $candidateId = $hooksJson.candidateId
 $supabaseUrl = $hooksJson.supabaseUrl
 $supabaseKey = $hooksJson.supabaseServiceKey
 
+# #region agent log - config values read
+$logEntry = "{`"sessionId`":`"debug-session`",`"runId`":`"initial`",`"hypothesisId`":`"E`",`"location`":`"beforeSubmitPrompt.ps1:172`",`"message`":`"Configuration values read`",`"data`":{`"candidateIdPresent`":$(-not [string]::IsNullOrEmpty($candidateId)),`"supabaseUrlPresent`":$(-not [string]::IsNullOrEmpty($supabaseUrl)),`"supabaseKeyPresent`":$(-not [string]::IsNullOrEmpty($supabaseKey))},`"timestamp`":$(Get-Date -UFormat %s)}"
+Add-Content -Path $logPath -Value $logEntry
+# #endregion
+
 if (-not $candidateId -or -not $supabaseUrl -or -not $supabaseKey) {
+    # #region agent log - config incomplete
+    $logEntry = "{`"sessionId`":`"debug-session`",`"runId`":`"initial`",`"hypothesisId`":`"E`",`"location`":`"beforeSubmitPrompt.ps1:177`",`"message`":`"Configuration incomplete, exiting`",`"data`":{},`"timestamp`":$(Get-Date -UFormat %s)}"
+    Add-Content -Path $logPath -Value $logEntry
+    # #endregion
     Write-Output '{"continue":true}'
     exit 0
 }
@@ -198,6 +276,11 @@ $requestBody = @{
     p_request_metadata = @{} | ConvertTo-Json -Compress
 } | ConvertTo-Json -Compress
 
+# #region agent log - Supabase call attempt
+$logEntry = "{`"sessionId`":`"debug-session`",`"runId`":`"initial`",`"hypothesisId`":`"C`",`"location`":`"beforeSubmitPrompt.ps1:203`",`"message`":`"Attempting Supabase call`",`"data`":{`"url`":`"${supabaseUrl}/rest/v1/rpc/log_prompt`",`"candidateId`":`"$candidateId`",`"promptLength`":$($promptText.Length)},`"timestamp`":$(Get-Date -UFormat %s)}"
+Add-Content -Path $logPath -Value $logEntry
+# #endregion
+
 # Call Supabase RPC function to log the prompt (non-blocking)
 try {
     $response = Invoke-RestMethod -Uri "${supabaseUrl}/rest/v1/rpc/log_prompt" `
@@ -211,8 +294,18 @@ try {
         -ErrorAction SilentlyContinue `
         -TimeoutSec 2
 
+    # #region agent log - Supabase call success
+    $logEntry = "{`"sessionId`":`"debug-session`",`"runId`":`"initial`",`"hypothesisId`":`"C`",`"location`":`"beforeSubmitPrompt.ps1:214`",`"message`":`"Supabase call succeeded`",`"data`":{`"response`":$($response | ConvertTo-Json -Compress)},`"timestamp`":$(Get-Date -UFormat %s)}"
+    Add-Content -Path $logPath -Value $logEntry
+    # #endregion
+
     $logEntry = "[$(Get-Date -Format 'yyyy-MM-ddTHH:mm:ss')] Candidate: $candidateId | Prompt: $($promptText.Substring(0, [Math]::Min(100, $promptText.Length)))... | Success"
 } catch {
+    # #region agent log - Supabase call failed
+    $logEntry = "{`"sessionId`":`"debug-session`",`"runId`":`"initial`",`"hypothesisId`":`"C`",`"location`":`"beforeSubmitPrompt.ps1:220`",`"message`":`"Supabase call failed`",`"data`":{`"error`":$($_.Exception.Message)},`"timestamp`":$(Get-Date -UFormat %s)}"
+    Add-Content -Path $logPath -Value $logEntry
+    # #endregion
+
     $logEntry = "[$(Get-Date -Format 'yyyy-MM-ddTHH:mm:ss')] Candidate: $candidateId | Prompt: $($promptText.Substring(0, [Math]::Min(100, $promptText.Length)))... | Error: $($_.Exception.Message)"
 }
 
